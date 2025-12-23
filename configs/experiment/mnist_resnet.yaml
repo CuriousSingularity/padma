@@ -1,0 +1,36 @@
+# @package _global_
+# Example experiment: MNIST with ResNet18
+
+defaults:
+  - override /model: default
+  - override /dataset: default
+  - override /training: default
+
+# Experiment name for logging
+experiment_name: mnist_resnet18
+
+# Model overrides
+model:
+  name: resnet18
+  pretrained: true
+  num_classes: 10
+
+# Dataset overrides
+dataset:
+  name: mnist
+  data_dir: ./data
+  image_size: 224
+  train_augmentation:
+    random_crop: false
+    horizontal_flip: false
+
+# Training overrides
+training:
+  epochs: 10
+  batch_size: 64
+  optimizer:
+    lr: 1e-3
+    weight_decay: 0.01
+  scheduler:
+    name: cosine
+    warmup_epochs: 1

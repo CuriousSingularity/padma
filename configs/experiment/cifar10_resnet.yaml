@@ -1,0 +1,33 @@
+# @package _global_
+# Example experiment: CIFAR-10 with ResNet50
+
+defaults:
+  - override /model: default
+  - override /dataset: default
+  - override /training: default
+
+# Experiment name for logging
+experiment_name: cifar10_resnet50
+
+# Model overrides
+model:
+  name: resnet50
+  pretrained: true
+  num_classes: 10
+
+# Dataset overrides
+dataset:
+  name: cifar10
+  data_dir: ./data
+  image_size: 224
+
+# Training overrides
+training:
+  epochs: 50
+  batch_size: 64
+  optimizer:
+    lr: 1e-4
+    weight_decay: 0.01
+  scheduler:
+    name: cosine
+    warmup_epochs: 5

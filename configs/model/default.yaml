@@ -1,0 +1,9 @@
+# Model configuration
+name: resnet50  # Any model name from timm
+pretrained: true  # Load pretrained weights from timm
+num_classes: 10  # Number of output classes
+drop_rate: 0.0  # Dropout rate
+drop_path_rate: 0.0  # Drop path rate (for vision transformers)
+
+# Optional: freeze backbone layers
+freeze_backbone: false

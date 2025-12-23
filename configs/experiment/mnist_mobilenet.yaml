@@ -1,0 +1,37 @@
+# @package _global_
+# Fast experiment: MNIST with MobileNetV3 Small (smallest/fastest)
+
+defaults:
+  - override /model: default
+  - override /dataset: default
+  - override /training: default
+
+# Experiment name for logging
+experiment_name: mnist_mobilenetv3_small
+
+# Model overrides - MobileNetV3 Small 050 (~1M params, very fast)
+model:
+  name: mobilenetv3_small_050
+  pretrained: true
+  num_classes: 10
+  drop_rate: 0.2
+
+# Dataset overrides
+dataset:
+  name: mnist
+  data_dir: ./data
+  image_size: 224
+  train_augmentation:
+    random_crop: false
+    horizontal_flip: false
+
+# Training overrides
+training:
+  epochs: 5
+  batch_size: 128
+  optimizer:
+    lr: 1e-3
+    weight_decay: 0.01
+  scheduler:
+    name: cosine
+    warmup_epochs: 1

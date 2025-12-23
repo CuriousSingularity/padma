@@ -1,0 +1,44 @@
+# @package _global_
+# Example experiment: ImageNet with Vision Transformer
+
+defaults:
+  - override /model: default
+  - override /dataset: default
+  - override /training: default
+
+# Experiment name for logging
+experiment_name: imagenet_vit_base
+
+# Model overrides
+model:
+  name: vit_base_patch16_224
+  pretrained: true
+  num_classes: 1000
+  drop_rate: 0.1
+  drop_path_rate: 0.1
+
+# Dataset overrides
+dataset:
+  name: imagenet
+  data_dir: /path/to/imagenet
+  image_size: 224
+  train_augmentation:
+    random_crop: true
+    horizontal_flip: true
+    auto_augment: rand-m9-mstd0.5
+
+# Training overrides
+training:
+  epochs: 300
+  batch_size: 256
+  accumulation_steps: 4
+  optimizer:
+    name: adamw
+    lr: 1e-4
+    weight_decay: 0.05
+  scheduler:
+    name: cosine
+    warmup_epochs: 20
+    min_lr: 1e-6
+  loss:
+    label_smoothing: 0.1

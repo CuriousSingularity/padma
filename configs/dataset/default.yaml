@@ -1,0 +1,23 @@
+# Dataset configuration
+name: mnist  # Dataset name: mnist, cifar10, cifar100, imagenet, or custom
+data_dir: ./data  # Directory to store/load data
+
+# Image preprocessing
+image_size: 224
+normalize:
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+# Data augmentation for training
+train_augmentation:
+  random_crop: false
+  horizontal_flip: false
+  color_jitter: false
+  auto_augment: null  # null, rand-m9-mstd0.5, augmix, etc.
+
+# Validation/test augmentation (typically just resize and center crop)
+val_augmentation:
+  center_crop: true
+
+# Train/val split ratio (only used if dataset doesn't have predefined splits)
+train_val_split: 0.9

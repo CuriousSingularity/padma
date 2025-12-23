@@ -1,0 +1,36 @@
+defaults:
+  - model: default
+  - dataset: default
+  - training: default
+  - _self_
+
+# Output directory for checkpoints and logs
+output_dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+# Random seed for reproducibility
+seed: 42
+
+# Device configuration (auto: cuda > mps > cpu)
+device: auto  # auto, cuda, mps, or cpu
+
+# Number of workers for data loading
+num_workers: 4
+
+# Enable mixed precision training
+mixed_precision: true
+
+# Logging configuration
+logging:
+  log_interval: 10  # Log every N batches
+  tensorboard_dir: ${output_dir}/tensorboard
+
+# Checkpoint configuration
+checkpoint:
+  save_dir: ${output_dir}/checkpoints
+  save_best: true
+  save_last: true
+  monitor_metric: val_accuracy
+  monitor_mode: max  # max or min
+
+# Path to checkpoint for evaluation (used by evaluate.py)
+checkpoint_path: null
