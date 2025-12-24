@@ -1,4 +1,6 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
+from collections import defaultdict
+
 import torch
 from torchmetrics import Accuracy, Precision, Recall, F1Score, MetricCollection
 
@@ -73,3 +75,35 @@ class MetricsTracker:
         self.device = device
         self.metrics = self.metrics.to(device)
         return self
+
+
+def compute_per_class_metrics(
+    preds: list, targets: list, num_classes: int
+) -> Dict[str, Any]:
+    """
+    Compute per-class accuracy from predictions and targets.
+
+    Args:
+        preds: List of predicted class labels
+        targets: List of ground truth class labels
+        num_classes: Total number of classes
+
+    Returns:
+        Dictionary mapping class names to their accuracy values
+    """
+    correct = defaultdict(int)
+    total = defaultdict(int)
+
+    for pred, target in zip(preds, targets):
+        total[target] += 1
+        if pred == target:
+            correct[target] += 1
+
+    per_class_acc = {}
+    for cls in range(num_classes):
+        if total[cls] > 0:
+            per_class_acc[f"class_{cls}"] = correct[cls] / total[cls]
+        else:
+            per_class_acc[f"class_{cls}"] = 0.0
+
+    return per_class_acc
