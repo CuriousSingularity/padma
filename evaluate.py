@@ -1,93 +1,48 @@
 #!/usr/bin/env python3
 """
-Evaluation script for trained PyTorch models.
+Evaluation script for trained PyTorch Lightning models.
 
 Usage:
     # Evaluate with checkpoint path
-    python evaluate.py checkpoint_path=outputs/2024-01-01/12-00-00/checkpoints/best.pt
+    python evaluate.py checkpoint_path=outputs/2024-01-01/12-00-00/checkpoints/best.ckpt
 
     # Evaluate with specific dataset
-    python evaluate.py checkpoint_path=path/to/best.pt dataset.name=cifar100
+    python evaluate.py checkpoint_path=path/to/best.ckpt dataset.name=cifar100
 
     # Evaluate with custom data directory
-    python evaluate.py checkpoint_path=path/to/best.pt dataset.data_dir=/path/to/data
+    python evaluate.py checkpoint_path=path/to/best.ckpt dataset.data_dir=/path/to/data
 """
 
 import json
 from pathlib import Path
 from typing import Dict, Any
+from collections import defaultdict
 
 import hydra
+import lightning as L
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.cuda.amp import autocast
 from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 
-from padma.models import create_model, load_checkpoint, get_model_info
-from padma.datasets import create_dataset, create_dataloaders
-from padma.utils import MetricsTracker, get_device
+from padma.models import create_model, get_model_info
+from padma.trainers import ImageClassificationModule, ImageClassificationDataModule
 
 
-@torch.no_grad()
-def evaluate(
-    model: nn.Module,
-    loader: DataLoader,
-    criterion: nn.Module,
-    device: str,
-    num_classes: int,
-    use_amp: bool = True,
-) -> Dict[str, float]:
-    """
-    Evaluate model on a dataset.
-
-    Args:
-        model: PyTorch model
-        loader: Data loader
-        criterion: Loss function
-        device: Device to use
-        num_classes: Number of classes
-        use_amp: Whether to use mixed precision
-
-    Returns:
-        Dictionary of metrics
-    """
-    model.eval()
-    metrics = MetricsTracker(num_classes=num_classes, device=device)
-
-    all_preds = []
-    all_targets = []
-
-    for inputs, targets in tqdm(loader, desc="Evaluating"):
-        inputs, targets = inputs.to(device), targets.to(device)
-
-        if use_amp and device == "cuda":
-            with autocast():
-                outputs = model(inputs)
-                loss = criterion(outputs, targets)
-        else:
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
-
-        metrics.update(outputs, targets, loss.item())
-
-        # Store predictions for detailed analysis
-        preds = outputs.argmax(dim=1)
-        all_preds.extend(preds.cpu().numpy())
-        all_targets.extend(targets.cpu().numpy())
-
-    results = metrics.compute()
-
-    return results, all_preds, all_targets
+def get_accelerator(cfg: DictConfig) -> str:
+    """Get accelerator type based on configuration."""
+    device = cfg.get("device", "auto")
+    if device == "auto":
+        if torch.cuda.is_available():
+            return "cuda"
+        elif torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+    return device
 
 
 def compute_per_class_metrics(
     preds: list, targets: list, num_classes: int
 ) -> Dict[str, Any]:
     """Compute per-class accuracy."""
-    from collections import defaultdict
-
     correct = defaultdict(int)
     total = defaultdict(int)
 
@@ -106,13 +61,58 @@ def compute_per_class_metrics(
     return per_class_acc
 
 
+class EvaluationModule(L.LightningModule):
+    """Extended module for detailed evaluation with per-class metrics."""
+
+    def __init__(self, model, cfg):
+        super().__init__()
+        self.model = model
+        self.cfg = cfg
+        self.criterion = torch.nn.CrossEntropyLoss()
+        self.all_preds = []
+        self.all_targets = []
+
+    def forward(self, x):
+        return self.model(x)
+
+    def test_step(self, batch, batch_idx):
+        inputs, targets = batch
+        outputs = self(inputs)
+        loss = self.criterion(outputs, targets)
+
+        preds = outputs.argmax(dim=1)
+        self.all_preds.extend(preds.cpu().numpy().tolist())
+        self.all_targets.extend(targets.cpu().numpy().tolist())
+
+        return {"loss": loss, "preds": preds, "targets": targets}
+
+    def on_test_epoch_end(self):
+        """Compute final metrics."""
+        per_class = compute_per_class_metrics(
+            self.all_preds, self.all_targets, self.cfg.model.num_classes
+        )
+
+        # Compute overall accuracy
+        correct = sum(1 for p, t in zip(self.all_preds, self.all_targets) if p == t)
+        accuracy = correct / len(self.all_preds)
+
+        self.log("test_accuracy", accuracy)
+
+        # Store results for later access
+        self.eval_results = {
+            "accuracy": accuracy,
+            "per_class": per_class,
+            "total_samples": len(self.all_preds),
+        }
+
+
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(cfg: DictConfig) -> None:
     """Main evaluation function."""
     # Check if checkpoint path is provided
     if not hasattr(cfg, "checkpoint_path") or cfg.checkpoint_path is None:
         print("Error: checkpoint_path is required")
-        print("Usage: python evaluate.py checkpoint_path=path/to/checkpoint.pt")
+        print("Usage: python evaluate.py checkpoint_path=path/to/checkpoint.ckpt")
         return
 
     checkpoint_path = Path(cfg.checkpoint_path)
@@ -128,23 +128,24 @@ def main(cfg: DictConfig) -> None:
     print(f"Model: {cfg.model.name}")
     print("=" * 60)
 
-    device = get_device(cfg)
-    print(f"Device: {device}")
-
     # Load checkpoint to get training config
     print("\nLoading checkpoint...")
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location="cpu")
 
-    # Use checkpoint config if available, otherwise use current config
-    if "config" in checkpoint:
-        train_cfg = OmegaConf.create(checkpoint["config"])
+    # Use checkpoint config if available (Lightning saves hyperparameters)
+    if "hyper_parameters" in checkpoint and "cfg" in checkpoint["hyper_parameters"]:
+        train_cfg = OmegaConf.create(checkpoint["hyper_parameters"]["cfg"])
         print("Using configuration from checkpoint")
-        # Override dataset if specified
+        # Override dataset if specified differently
         if hasattr(cfg, "dataset"):
             train_cfg.dataset = cfg.dataset
     else:
         train_cfg = cfg
         print("Using current configuration")
+
+    # Get accelerator
+    accelerator = get_accelerator(cfg)
+    print(f"Accelerator: {accelerator}")
 
     # Create model
     print("\nCreating model...")
@@ -153,77 +154,87 @@ def main(cfg: DictConfig) -> None:
     print(f"Model: {train_cfg.model.name}")
     print(f"Total parameters: {model_info['total_params']:,}")
 
-    # Load model weights
-    model = load_checkpoint(model, str(checkpoint_path), device)
-    model = model.to(device)
-    print("Model weights loaded successfully")
-
-    # Create datasets
-    print("\nCreating datasets...")
-    train_dataset, val_dataset, test_dataset = create_dataset(train_cfg)
-    print(f"Val samples: {len(val_dataset):,}")
-    if test_dataset:
-        print(f"Test samples: {len(test_dataset):,}")
-
-    # Create data loaders
-    _, val_loader, test_loader = create_dataloaders(
-        train_cfg, train_dataset, val_dataset, test_dataset
+    # Load Lightning checkpoint
+    lightning_module = ImageClassificationModule.load_from_checkpoint(
+        checkpoint_path,
+        model=model,
+        cfg=train_cfg,
     )
+    print("Loaded Lightning checkpoint successfully")
 
-    # Create criterion
-    criterion = nn.CrossEntropyLoss()
+    # Create evaluation module with the loaded model
+    eval_module = EvaluationModule(model=lightning_module.model, cfg=train_cfg)
+
+    # Create DataModule
+    print("\nCreating datasets...")
+    datamodule = ImageClassificationDataModule(cfg=train_cfg)
+    datamodule.setup("test")
+
+    if datamodule.val_dataset:
+        print(f"Val samples: {len(datamodule.val_dataset):,}")
+    if datamodule.test_dataset:
+        print(f"Test samples: {len(datamodule.test_dataset):,}")
+
+    # Create trainer for evaluation
+    trainer = L.Trainer(
+        accelerator=accelerator,
+        devices=1,
+        logger=False,
+        enable_progress_bar=True,
+    )
 
     # Evaluate on validation set
     print("\n" + "=" * 60)
     print("Validation Set Results:")
     print("=" * 60)
-    val_results, val_preds, val_targets = evaluate(
-        model=model,
-        loader=val_loader,
-        criterion=criterion,
-        device=device,
-        num_classes=train_cfg.model.num_classes,
-        use_amp=cfg.mixed_precision and device == "cuda",
-    )
 
-    for name, value in val_results.items():
-        print(f"  {name}: {value:.4f}")
+    # Reset predictions
+    eval_module.all_preds = []
+    eval_module.all_targets = []
+
+    # Use val_dataloader for validation
+    trainer.test(eval_module, dataloaders=datamodule.val_dataloader())
+
+    val_results = eval_module.eval_results
+    print(f"  Accuracy: {val_results['accuracy']:.4f}")
+    print(f"  Total samples: {val_results['total_samples']}")
 
     # Evaluate on test set if available
-    if test_loader is not None:
+    test_results = None
+    if datamodule.test_dataset is not None:
         print("\n" + "=" * 60)
         print("Test Set Results:")
         print("=" * 60)
-        test_results, test_preds, test_targets = evaluate(
-            model=model,
-            loader=test_loader,
-            criterion=criterion,
-            device=device,
-            num_classes=train_cfg.model.num_classes,
-            use_amp=cfg.mixed_precision and device == "cuda",
-        )
 
-        for name, value in test_results.items():
-            print(f"  {name}: {value:.4f}")
+        # Reset predictions
+        eval_module.all_preds = []
+        eval_module.all_targets = []
 
-        # Compute per-class metrics
-        per_class = compute_per_class_metrics(
-            test_preds, test_targets, train_cfg.model.num_classes
-        )
+        trainer.test(eval_module, dataloaders=datamodule.test_dataloader())
+
+        test_results = eval_module.eval_results
+        print(f"  Accuracy: {test_results['accuracy']:.4f}")
+        print(f"  Total samples: {test_results['total_samples']}")
 
         print("\nPer-class Accuracy:")
-        for cls, acc in per_class.items():
+        for cls, acc in test_results["per_class"].items():
             print(f"  {cls}: {acc:.4f}")
 
     # Save results
     results_path = checkpoint_path.parent / "evaluation_results.json"
     results = {
         "checkpoint": str(checkpoint_path),
-        "validation": val_results,
+        "validation": {
+            "accuracy": val_results["accuracy"],
+            "total_samples": val_results["total_samples"],
+        },
     }
-    if test_loader is not None:
-        results["test"] = test_results
-        results["per_class"] = per_class
+    if test_results is not None:
+        results["test"] = {
+            "accuracy": test_results["accuracy"],
+            "total_samples": test_results["total_samples"],
+            "per_class": test_results["per_class"],
+        }
 
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2)
