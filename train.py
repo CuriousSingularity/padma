@@ -21,18 +21,14 @@ from pathlib import Path
 
 import hydra
 import lightning as L
-from lightning.pytorch.callbacks import (
-    EarlyStopping,
-    LearningRateMonitor,
-    ModelCheckpoint,
-    RichProgressBar,
-)
+from hydra.utils import instantiate
+from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from omegaconf import DictConfig, OmegaConf
 
-from padma.models import create_model, get_model_info
+from padma.models import get_model_info
 from padma.trainers import ImageClassificationModule, ImageClassificationDataModule
-from padma.utils import set_seed, get_accelerator, get_precision
+from padma.utils import set_seed, get_accelerator, get_precision, create_callbacks
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +64,10 @@ def main(cfg: DictConfig) -> None:
 
     # Create model
     logger.info("Creating model...")
-    model = create_model(cfg)
+    model_factory = instantiate(cfg.model)
+    model = model_factory.create()
     model_info = get_model_info(model)
-    logger.info(f"Model: {cfg.model.name}")
+    logger.info(f"Model: {cfg.model.model_name}")
     logger.info(f"Total parameters: {model_info['total_params']:,}")
     logger.info(f"Trainable parameters: {model_info['trainable_params']:,}")
 
@@ -94,36 +91,8 @@ def main(cfg: DictConfig) -> None:
     logger.info(f"Accelerator: {accelerator}")
     logger.info(f"Precision: {precision}")
 
-    # Setup callbacks
-    callbacks = []
-
-    # Model checkpoint callback
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=cfg.checkpoint.save_dir,
-        filename="best-{epoch:02d}-{val_accuracy:.4f}",
-        monitor=cfg.checkpoint.monitor_metric,
-        mode=cfg.checkpoint.monitor_mode,
-        save_top_k=1,
-        save_last=cfg.checkpoint.save_last,
-    )
-    callbacks.append(checkpoint_callback)
-
-    # Early stopping callback
-    if cfg.training.early_stopping.enabled:
-        early_stopping = EarlyStopping(
-            monitor=cfg.training.early_stopping.monitor_metric,
-            patience=cfg.training.early_stopping.patience,
-            mode=cfg.training.early_stopping.monitor_mode,
-            verbose=True,
-        )
-        callbacks.append(early_stopping)
-
-    # Learning rate monitor
-    lr_monitor = LearningRateMonitor(logging_interval="epoch")
-    callbacks.append(lr_monitor)
-
-    # Progress bar
-    callbacks.append(RichProgressBar())
+    # Setup callbacks from configuration
+    callbacks = create_callbacks(cfg)
 
     # Setup logger
     logger = TensorBoardLogger(
@@ -154,9 +123,19 @@ def main(cfg: DictConfig) -> None:
     logger.info("=" * 60)
     logger.info("Training Complete!")
     logger.info("=" * 60)
-    logger.info(f"Best model checkpoint: {checkpoint_callback.best_model_path}")
-    logger.info(f"Best {cfg.checkpoint.monitor_metric}: {checkpoint_callback.best_model_score:.4f}")
-    logger.info(f"Checkpoints saved to: {cfg.checkpoint.save_dir}")
+
+    # Get checkpoint callback if it was enabled
+    checkpoint_callback = None
+    for callback in callbacks:
+        if isinstance(callback, ModelCheckpoint):
+            checkpoint_callback = callback
+            break
+
+    if checkpoint_callback:
+        logger.info(f"Best model checkpoint: {checkpoint_callback.best_model_path}")
+        logger.info(f"Best {cfg.callbacks.model_checkpoint.monitor}: {checkpoint_callback.best_model_score:.4f}")
+        logger.info(f"Checkpoints saved to: {cfg.checkpoint.save_dir}")
+
     logger.info(f"TensorBoard logs: {output_dir / 'tensorboard'}")
     logger.info("To view TensorBoard logs, run:")
     logger.info(f"  tensorboard --logdir={output_dir / 'tensorboard'}")

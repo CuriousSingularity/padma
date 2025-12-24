@@ -1,0 +1,56 @@
+# Callbacks configuration for training and evaluation
+
+# Model checkpoint callback - saves best models during training
+model_checkpoint:
+  _target_: lightning.pytorch.callbacks.ModelCheckpoint
+  enabled: true
+  dirpath: ${checkpoint.save_dir}
+  filename: "best-{epoch:02d}-{val_accuracy:.4f}"
+  monitor: val_accuracy
+  mode: max  # max or min
+  save_top_k: 1
+  save_last: true
+  auto_insert_metric_name: false
+  save_weights_only: false
+  every_n_epochs: null
+  every_n_train_steps: null
+  train_time_interval: null
+  save_on_train_epoch_end: null
+
+# Early stopping callback - stops training when metric stops improving
+early_stopping:
+  _target_: lightning.pytorch.callbacks.EarlyStopping
+  enabled: false
+  monitor: val_loss
+  patience: 20
+  mode: min  # max or min
+  min_delta: 0.0
+  verbose: true
+  strict: true
+  check_finite: true
+  stopping_threshold: null
+  divergence_threshold: null
+  check_on_train_epoch_end: null
+
+# Learning rate monitor - logs learning rate to TensorBoard
+lr_monitor:
+  _target_: lightning.pytorch.callbacks.LearningRateMonitor
+  enabled: true
+  logging_interval: epoch  # step or epoch
+  log_momentum: false
+
+# Progress bar - displays training progress
+progress_bar:
+  _target_: lightning.pytorch.callbacks.RichProgressBar
+  enabled: true
+  refresh_rate: 1
+  leave: false
+  theme:
+    description: white
+    progress_bar: "#6206E0"
+    progress_bar_finished: "#6206E0"
+    progress_bar_pulse: "#6206E0"
+    batch_progress: white
+    time: grey54
+    processing_speed: grey70
+    metrics: white

@@ -2,6 +2,7 @@ defaults:
   - model: default
   - dataset: default
   - training: default
+  - callbacks: default
   - _self_
 
 # Output directory for checkpoints and logs

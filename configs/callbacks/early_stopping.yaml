@@ -1,0 +1,60 @@
+# @package _global_
+
+# Callbacks configuration with early stopping enabled
+# Usage: python train.py callbacks=early_stopping
+
+callbacks:
+  # Model checkpoint callback
+  model_checkpoint:
+    _target_: lightning.pytorch.callbacks.ModelCheckpoint
+    enabled: true
+    dirpath: ${checkpoint.save_dir}
+    filename: "best-{epoch:02d}-{val_accuracy:.4f}"
+    monitor: val_accuracy
+    mode: max
+    save_top_k: 1
+    save_last: true
+    auto_insert_metric_name: false
+    save_weights_only: false
+    every_n_epochs: null
+    every_n_train_steps: null
+    train_time_interval: null
+    save_on_train_epoch_end: null
+
+  # Early stopping - enabled with aggressive patience
+  early_stopping:
+    _target_: lightning.pytorch.callbacks.EarlyStopping
+    enabled: true
+    monitor: val_loss
+    patience: 10
+    mode: min
+    min_delta: 0.001
+    verbose: true
+    strict: true
+    check_finite: true
+    stopping_threshold: null
+    divergence_threshold: null
+    check_on_train_epoch_end: null
+
+  # Learning rate monitor
+  lr_monitor:
+    _target_: lightning.pytorch.callbacks.LearningRateMonitor
+    enabled: true
+    logging_interval: epoch
+    log_momentum: false
+
+  # Progress bar
+  progress_bar:
+    _target_: lightning.pytorch.callbacks.RichProgressBar
+    enabled: true
+    refresh_rate: 1
+    leave: false
+    theme:
+      description: white
+      progress_bar: "#6206E0"
+      progress_bar_finished: "#6206E0"
+      progress_bar_pulse: "#6206E0"
+      batch_progress: white
+      time: grey54
+      processing_speed: grey70
+      metrics: white
