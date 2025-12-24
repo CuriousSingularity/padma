@@ -20,9 +20,10 @@ from pathlib import Path
 import hydra
 import lightning as L
 import torch
+from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
-from padma.models import create_model, get_model_info
+from padma.models import get_model_info
 from padma.trainers import ImageClassificationModule, ImageClassificationDataModule
 from padma.utils import get_accelerator, compute_per_class_metrics
 
@@ -100,7 +101,7 @@ def main(cfg: DictConfig) -> None:
     logger.info("=" * 60)
     logger.info(f"Checkpoint: {checkpoint_path}")
     logger.info(f"Dataset: {cfg.dataset.name}")
-    logger.info(f"Model: {cfg.model.name}")
+    logger.info(f"Model: {cfg.model.model_name}")
     logger.info("=" * 60)
 
     # Load checkpoint to get training config
@@ -124,9 +125,10 @@ def main(cfg: DictConfig) -> None:
 
     # Create model
     logger.info("Creating model...")
-    model = create_model(train_cfg)
+    model_factory = instantiate(train_cfg.model)
+    model = model_factory.create()
     model_info = get_model_info(model)
-    logger.info(f"Model: {train_cfg.model.name}")
+    logger.info(f"Model: {train_cfg.model.model_name}")
     logger.info(f"Total parameters: {model_info['total_params']:,}")
 
     # Load Lightning checkpoint

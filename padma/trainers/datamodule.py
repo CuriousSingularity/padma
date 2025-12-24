@@ -1,10 +1,9 @@
 from typing import Optional
 
 import lightning as L
+from hydra.utils import instantiate
 from torch.utils.data import DataLoader, Dataset
 from omegaconf import DictConfig
-
-from padma.datasets import create_dataset
 
 
 class ImageClassificationDataModule(L.LightningDataModule):
@@ -36,15 +35,27 @@ class ImageClassificationDataModule(L.LightningDataModule):
             stage: Current stage ('fit', 'validate', 'test', 'predict')
         """
         if stage == "fit" or stage is None:
-            self.train_dataset, self.val_dataset, self.test_dataset = create_dataset(self.cfg)
+            self.train_dataset, self.val_dataset, self.test_dataset = instantiate(
+                self.cfg.dataset,
+                seed=self.cfg.seed,
+                _convert_="all"
+            )
 
         if stage == "validate":
             if self.val_dataset is None:
-                _, self.val_dataset, _ = create_dataset(self.cfg)
+                _, self.val_dataset, _ = instantiate(
+                    self.cfg.dataset,
+                    seed=self.cfg.seed,
+                    _convert_="all"
+                )
 
         if stage == "test":
             if self.test_dataset is None:
-                _, _, self.test_dataset = create_dataset(self.cfg)
+                _, _, self.test_dataset = instantiate(
+                    self.cfg.dataset,
+                    seed=self.cfg.seed,
+                    _convert_="all"
+                )
 
     def train_dataloader(self) -> DataLoader:
         """Create training dataloader."""
