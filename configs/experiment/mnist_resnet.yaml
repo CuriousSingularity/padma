@@ -3,7 +3,7 @@
 
 defaults:
   - override /model: default
-  - override /dataset: default
+  - override /dataset: mnist
   - override /training: default
 
 # Experiment name for logging
@@ -11,13 +11,12 @@ experiment_name: mnist_resnet18
 
 # Model overrides
 model:
-  name: resnet18
+  model_name: resnet18
   pretrained: true
   num_classes: 10
 
 # Dataset overrides
 dataset:
-  name: mnist
   data_dir: ./data
   image_size: 224
   train_augmentation:

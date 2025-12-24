@@ -3,7 +3,7 @@
 
 defaults:
   - override /model: default
-  - override /dataset: default
+  - override /dataset: cifar10
   - override /training: default
 
 # Experiment name for logging
@@ -11,13 +11,12 @@ experiment_name: cifar10_resnet50
 
 # Model overrides
 model:
-  name: resnet50
+  model_name: resnet50
   pretrained: true
   num_classes: 10
 
 # Dataset overrides
 dataset:
-  name: cifar10
   data_dir: ./data
   image_size: 224
 

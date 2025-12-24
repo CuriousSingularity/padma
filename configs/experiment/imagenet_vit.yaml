@@ -3,7 +3,7 @@
 
 defaults:
   - override /model: default
-  - override /dataset: default
+  - override /dataset: imagenet
   - override /training: default
 
 # Experiment name for logging
@@ -11,7 +11,7 @@ experiment_name: imagenet_vit_base
 
 # Model overrides
 model:
-  name: vit_base_patch16_224
+  model_name: vit_base_patch16_224
   pretrained: true
   num_classes: 1000
   drop_rate: 0.1
@@ -19,7 +19,6 @@ model:
 
 # Dataset overrides
 dataset:
-  name: imagenet
   data_dir: /path/to/imagenet
   image_size: 224
   train_augmentation:
