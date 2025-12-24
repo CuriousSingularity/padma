@@ -1,0 +1,21 @@
+# Custom dataset configuration (ImageFolder-based)
+_target_: padma.datasets.custom.create_custom_dataset
+name: custom
+data_dir: ./data/custom
+image_size: 224
+
+# Training augmentation
+train_augmentation:
+  random_crop: true
+  horizontal_flip: true
+  color_jitter: false
+  auto_augment: null
+
+# Validation augmentation
+val_augmentation:
+  center_crop: true
+
+# Normalization
+normalize:
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]

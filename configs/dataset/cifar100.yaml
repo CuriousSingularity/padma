@@ -1,0 +1,22 @@
+# CIFAR-100 dataset configuration
+_target_: padma.datasets.cifar.create_cifar100_dataset
+name: cifar100
+data_dir: ./data
+image_size: 224
+train_val_split: 0.9
+
+# Training augmentation
+train_augmentation:
+  random_crop: true
+  horizontal_flip: true
+  color_jitter: true
+  auto_augment: null
+
+# Validation augmentation
+val_augmentation:
+  center_crop: true
+
+# Normalization
+normalize:
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
