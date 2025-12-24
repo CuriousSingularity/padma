@@ -35,3 +35,42 @@ def get_device(cfg: DictConfig) -> str:
         return "cpu"
 
     return device
+
+
+def get_accelerator(cfg: DictConfig) -> str:
+    """
+    Get accelerator type for PyTorch Lightning based on configuration.
+
+    Auto-detection order: CUDA > MPS > CPU
+
+    Args:
+        cfg: Configuration with device field (auto, cuda, mps, or cpu)
+
+    Returns:
+        Accelerator string for PyTorch Lightning (cuda, mps, or cpu)
+    """
+    device = cfg.get("device", "auto")
+    if device == "auto":
+        if torch.cuda.is_available():
+            return "cuda"
+        elif torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+    return device
+
+
+def get_precision(cfg: DictConfig, accelerator: str) -> str:
+    """
+    Get precision setting for PyTorch Lightning based on configuration and accelerator.
+
+    Args:
+        cfg: Configuration with mixed_precision field
+        accelerator: Accelerator type (cuda, mps, or cpu)
+
+    Returns:
+        Precision string for PyTorch Lightning (e.g., '16-mixed', '32-true')
+    """
+    if cfg.get("mixed_precision", False):
+        if accelerator in ["cuda", "mps"]:
+            return "16-mixed"
+    return "32-true"
