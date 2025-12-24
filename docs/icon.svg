@@ -1,0 +1,83 @@
+<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="800" fill="#0d1117"/>
+  
+  <!-- Circular glow effect -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#ff69b4;stop-opacity:0.3" />
+      <stop offset="50%" style="stop-color:#9d4edd;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#0d1117;stop-opacity:0" />
+    </radialGradient>
+    
+    <radialGradient id="petalGradient1" cx="30%" cy="30%">
+      <stop offset="0%" style="stop-color:#ffd6f0" />
+      <stop offset="100%" style="stop-color:#ff69b4" />
+    </radialGradient>
+    
+    <radialGradient id="petalGradient2" cx="30%" cy="30%">
+      <stop offset="0%" style="stop-color:#e0b3ff" />
+      <stop offset="100%" style="stop-color:#9d4edd" />
+    </radialGradient>
+    
+    <radialGradient id="centerGradient" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#ffd700" />
+      <stop offset="100%" style="stop-color:#ff8c00" />
+    </radialGradient>
+    
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Glow background -->
+  <circle cx="400" cy="400" r="300" fill="url(#glow)"/>
+  
+  <!-- Outer petals (rebirth layer) -->
+  <g filter="url(#softGlow)">
+    <!-- Layer 1 - Outermost -->
+    <ellipse cx="400" cy="220" rx="60" ry="120" fill="url(#petalGradient2)" opacity="0.8" transform="rotate(-90 400 400)"/>
+    <ellipse cx="580" cy="400" rx="60" ry="120" fill="url(#petalGradient2)" opacity="0.8" transform="rotate(0 400 400)"/>
+    <ellipse cx="400" cy="580" rx="60" ry="120" fill="url(#petalGradient2)" opacity="0.8" transform="rotate(90 400 400)"/>
+    <ellipse cx="220" cy="400" rx="60" ry="120" fill="url(#petalGradient2)" opacity="0.8" transform="rotate(180 400 400)"/>
+    
+    <ellipse cx="490" cy="260" rx="55" ry="110" fill="url(#petalGradient2)" opacity="0.8" transform="rotate(-45 400 400)"/>
+    <ellipse cx="540" cy="490" rx="55" ry="110" fill="url(#petalGradient2)" opacity="0.8" transform="rotate(45 400 400)"/>
+    <ellipse cx="310" cy="540" rx="55" ry="110" fill="url(#petalGradient2)" opacity="0.8" transform="rotate(135 400 400)"/>
+    <ellipse cx="260" cy="310" rx="55" ry="110" fill="url(#petalGradient2)" opacity="0.8" transform="rotate(-135 400 400)"/>
+    
+    <!-- Layer 2 - Middle -->
+    <ellipse cx="400" cy="270" rx="55" ry="100" fill="url(#petalGradient1)" opacity="0.9" transform="rotate(-90 400 400)"/>
+    <ellipse cx="530" cy="400" rx="55" ry="100" fill="url(#petalGradient1)" opacity="0.9" transform="rotate(0 400 400)"/>
+    <ellipse cx="400" cy="530" rx="55" ry="100" fill="url(#petalGradient1)" opacity="0.9" transform="rotate(90 400 400)"/>
+    <ellipse cx="270" cy="400" rx="55" ry="100" fill="url(#petalGradient1)" opacity="0.9" transform="rotate(180 400 400)"/>
+    
+    <ellipse cx="470" cy="290" rx="50" ry="95" fill="url(#petalGradient1)" opacity="0.9" transform="rotate(-45 400 400)"/>
+    <ellipse cx="510" cy="470" rx="50" ry="95" fill="url(#petalGradient1)" opacity="0.9" transform="rotate(45 400 400)"/>
+    <ellipse cx="330" cy="510" rx="50" ry="95" fill="url(#petalGradient1)" opacity="0.9" transform="rotate(135 400 400)"/>
+    <ellipse cx="290" cy="330" rx="50" ry="95" fill="url(#petalGradient1)" opacity="0.9" transform="rotate(-135 400 400)"/>
+    
+    <!-- Layer 3 - Inner petals -->
+    <ellipse cx="400" cy="320" rx="45" ry="80" fill="#ffb3e6" transform="rotate(-90 400 400)"/>
+    <ellipse cx="480" cy="400" rx="45" ry="80" fill="#ffb3e6" transform="rotate(0 400 400)"/>
+    <ellipse cx="400" cy="480" rx="45" ry="80" fill="#ffb3e6" transform="rotate(90 400 400)"/>
+    <ellipse cx="320" cy="400" rx="45" ry="80" fill="#ffb3e6" transform="rotate(180 400 400)"/>
+  </g>
+  
+  <!-- Center - seed of new life -->
+  <circle cx="400" cy="400" r="50" fill="url(#centerGradient)" filter="url(#softGlow)"/>
+  
+  <!-- Sacred geometry dots in center -->
+  <circle cx="400" cy="400" r="6" fill="#ffd700"/>
+  <circle cx="420" cy="400" r="3" fill="#ffd700" opacity="0.8"/>
+  <circle cx="410" cy="415" r="3" fill="#ffd700" opacity="0.8"/>
+  <circle cx="390" cy="415" r="3" fill="#ffd700" opacity="0.8"/>
+  <circle cx="380" cy="400" r="3" fill="#ffd700" opacity="0.8"/>
+  <circle cx="390" cy="385" r="3" fill="#ffd700" opacity="0.8"/>
+  <circle cx="410" cy="385" r="3" fill="#ffd700" opacity="0.8"/>
+  
+</svg>
