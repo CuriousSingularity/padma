@@ -9,6 +9,7 @@ setup(
     install_requires=[
         "torch>=2.0.0",
         "torchvision>=0.15.0",
+        "lightning>=2.0.0",
         "timm>=0.9.0",
         "hydra-core>=1.3.0",
         "omegaconf>=2.3.0",
@@ -16,8 +17,8 @@ setup(
         "torchmetrics>=1.0.0",
         "pillow>=9.0.0",
         "numpy>=1.24.0",
-        "tqdm>=4.65.0",
         "scikit-learn>=1.3.0",
+        "rich>=13.0.0",
     ],
     extras_require={
         "dev": [
