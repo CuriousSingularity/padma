@@ -62,19 +62,19 @@ The power of Padma lies in its flexibility. Mix and match any model with any dat
 
 ```bash
 # Experiment 1: Try EfficientNet on CIFAR-100
-python train.py model.name=efficientnet_b0 dataset.name=cifar100 model.num_classes=100
+python train.py model.model_name=efficientnet_b0 dataset=cifar100 model.num_classes=100
 
 # Experiment 2: Compare different Vision Transformer sizes on MNIST
-python train.py model.name=vit_tiny_patch16_224 dataset.name=mnist
-python train.py model.name=vit_small_patch16_224 dataset.name=mnist
-python train.py model.name=vit_base_patch16_224 dataset.name=mnist
+python train.py model.model_name=vit_tiny_patch16_224 dataset=mnist
+python train.py model.model_name=vit_small_patch16_224 dataset=mnist
+python train.py model.model_name=vit_base_patch16_224 dataset=mnist
 
 # Experiment 3: Test lightweight models for edge deployment
-python train.py model.name=mobilenetv3_small_050 training.batch_size=256
-python train.py model.name=efficientnet_b0 training.batch_size=256
+python train.py model.model_name=mobilenetv3_small_050 training.batch_size=256
+python train.py model.model_name=efficientnet_b0 training.batch_size=256
 
 # Experiment 4: Your custom dataset with any pretrained model
-python train.py dataset.name=custom dataset.data_dir=./my_data model.name=resnet50 model.num_classes=20
+python train.py dataset=custom dataset.data_dir=./my_data model.model_name=resnet50 model.num_classes=20
 
 # Experiment 5: Sweep hyperparameters
 python train.py training.optimizer.lr=1e-4 training.batch_size=64
@@ -109,16 +109,16 @@ python train.py +experiment=imagenet_vit       # ViT-Base
 
 ```bash
 # Change model
-python train.py model.name=resnet101
+python train.py model.model_name=resnet101
 
 # Change training parameters
 python train.py training.epochs=50 training.batch_size=64 training.optimizer.lr=1e-3
 
 # Change dataset
-python train.py dataset.name=cifar100 model.num_classes=100
+python train.py dataset=cifar100 model.num_classes=100
 
 # Combine overrides
-python train.py model.name=efficientnet_b0 training.epochs=30 training.batch_size=128
+python train.py model.model_name=efficientnet_b0 training.epochs=30 training.batch_size=128
 ```
 
 ### 🤖 Available Models
@@ -168,7 +168,7 @@ After training, evaluate the model:
 python evaluate.py checkpoint_path=outputs/<date>/<time>/checkpoints/best-epoch=XX-val_accuracy=X.XXXX.ckpt
 
 # Evaluate on different dataset
-python evaluate.py checkpoint_path=path/to/checkpoint.ckpt dataset.name=cifar10
+python evaluate.py checkpoint_path=path/to/checkpoint.ckpt dataset=cifar10
 ```
 
 Evaluation outputs:
@@ -204,9 +204,18 @@ configs/
 ├── model/
 │   └── default.yaml      # Model settings
 ├── dataset/
-│   └── default.yaml      # Dataset settings
+│   ├── default.yaml      # Dataset settings (defaults to MNIST)
+│   ├── mnist.yaml        # MNIST-specific config
+│   ├── cifar10.yaml      # CIFAR-10 config
+│   ├── cifar100.yaml     # CIFAR-100 config
+│   ├── imagenet.yaml     # ImageNet config
+│   └── custom.yaml       # Custom dataset config
 ├── training/
 │   └── default.yaml      # Training settings
+├── callbacks/
+│   ├── default.yaml      # Standard callbacks
+│   ├── minimal.yaml      # Minimal callback setup
+│   └── early_stopping.yaml  # With early stopping enabled
 └── experiment/
     ├── mnist_mobilenet.yaml
     ├── mnist_resnet.yaml
@@ -235,9 +244,18 @@ python train.py mixed_precision=false  # Disable AMP
 python train.py checkpoint.save_best=true checkpoint.monitor_metric=val_accuracy
 ```
 
-**Early Stopping**:
+**Callbacks** (checkpointing, early stopping, progress bar):
 ```bash
-python train.py training.early_stopping.enabled=true training.early_stopping.patience=10
+# Use different callback presets
+python train.py callbacks=minimal          # Only checkpoint and progress bar
+python train.py callbacks=early_stopping   # Enable early stopping with aggressive patience
+
+# Enable/disable specific callbacks
+python train.py callbacks.early_stopping.enabled=true callbacks.early_stopping.patience=10
+
+# Customize callback parameters
+python train.py callbacks.model_checkpoint.save_top_k=3
+python train.py callbacks.early_stopping.patience=15
 ```
 
 ## 📂 Project Structure
@@ -246,11 +264,7 @@ python train.py training.early_stopping.enabled=true training.early_stopping.pat
 padma/
 ├── models/
 │   ├── base.py          # Utilities (freeze, load, info)
-│   ├── resnet.py        # ResNet family
-│   ├── vit.py           # Vision Transformers
-│   ├── efficientnet.py  # EfficientNet family
-│   ├── convnext.py      # ConvNeXt family
-│   └── mobilenet.py     # MobileNet/LCNet (lightweight)
+│   └── model_factory.py # Unified TimmModelFactory for all architectures
 ├── datasets/
 │   ├── base.py          # Transforms, dataloaders
 │   ├── mnist.py         # MNIST dataset
@@ -258,10 +272,13 @@ padma/
 │   ├── imagenet.py      # ImageNet
 │   └── custom.py        # Custom ImageFolder
 ├── trainers/
-│   └── trainer.py       # Training loop
+│   ├── lightning_module.py  # Lightning training module
+│   └── datamodule.py        # Lightning data module
 └── utils/
     ├── device.py        # Device detection
-    └── metrics.py       # Metrics tracking
+    ├── metrics.py       # Metrics tracking
+    ├── callbacks.py     # Callback factory for Lightning
+    └── reproducibility.py  # Seed setting
 ```
 
 ## 💼 Custom Dataset
@@ -298,14 +315,14 @@ data/
 
 ```bash
 # Basic usage - Padma auto-detects number of classes
-python train.py dataset.name=custom dataset.data_dir=./data model.num_classes=3
+python train.py dataset=custom dataset.data_dir=./data model.num_classes=3
 
 # Experiment with different models on your data
-python train.py dataset.name=custom dataset.data_dir=./data model.name=efficientnet_b0 model.num_classes=3
-python train.py dataset.name=custom dataset.data_dir=./data model.name=vit_small_patch16_224 model.num_classes=3
+python train.py dataset=custom dataset.data_dir=./data model.model_name=efficientnet_b0 model.num_classes=3
+python train.py dataset=custom dataset.data_dir=./data model.model_name=vit_small_patch16_224 model.num_classes=3
 
 # Use your data with any training configuration
-python train.py dataset.name=custom dataset.data_dir=./my_dataset model.num_classes=20 training.epochs=100 training.batch_size=32
+python train.py dataset=custom dataset.data_dir=./my_dataset model.num_classes=20 training.epochs=100 training.batch_size=32
 ```
 
 That's it! No need to write custom dataset classes or data loading code. Focus on experimentation, not boilerplate.
