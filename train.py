@@ -16,14 +16,10 @@ Usage:
     python train.py dataset.name=cifar100 model.num_classes=100
 """
 
-import os
-import random
 from pathlib import Path
 
 import hydra
 import lightning as L
-import numpy as np
-import torch
 from lightning.pytorch.callbacks import (
     EarlyStopping,
     LearningRateMonitor,
@@ -35,37 +31,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from padma.models import create_model, get_model_info
 from padma.trainers import ImageClassificationModule, ImageClassificationDataModule
-
-
-def set_seed(seed: int) -> None:
-    """Set random seed for reproducibility."""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    L.seed_everything(seed, workers=True)
-
-
-def get_accelerator(cfg: DictConfig) -> str:
-    """Get accelerator type based on configuration."""
-    device = cfg.get("device", "auto")
-    if device == "auto":
-        if torch.cuda.is_available():
-            return "cuda"
-        elif torch.backends.mps.is_available():
-            return "mps"
-        return "cpu"
-    return device
-
-
-def get_precision(cfg: DictConfig, accelerator: str) -> str:
-    """Get precision setting based on configuration and accelerator."""
-    if cfg.get("mixed_precision", False):
-        if accelerator == "cuda":
-            return "16-mixed"
-        elif accelerator == "mps":
-            return "16-mixed"
-    return "32-true"
+from padma.utils import set_seed, get_accelerator, get_precision
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
