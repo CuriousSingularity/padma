@@ -14,6 +14,7 @@ Usage:
 """
 
 import json
+import logging
 from pathlib import Path
 
 import hydra
@@ -24,6 +25,8 @@ from omegaconf import DictConfig, OmegaConf
 from padma.models import create_model, get_model_info
 from padma.trainers import ImageClassificationModule, ImageClassificationDataModule
 from padma.utils import get_accelerator, compute_per_class_metrics
+
+logger = logging.getLogger(__name__)
 
 
 class EvaluationModule(L.LightningModule):
@@ -74,50 +77,57 @@ class EvaluationModule(L.LightningModule):
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(cfg: DictConfig) -> None:
     """Main evaluation function."""
+    # Setup logging
+    logging.basicConfig(
+        level=getattr(logging, cfg.logging.level),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
     # Check if checkpoint path is provided
     if not hasattr(cfg, "checkpoint_path") or cfg.checkpoint_path is None:
-        print("Error: checkpoint_path is required")
-        print("Usage: python evaluate.py checkpoint_path=path/to/checkpoint.ckpt")
+        logger.error("checkpoint_path is required")
+        logger.info("Usage: python evaluate.py checkpoint_path=path/to/checkpoint.ckpt")
         return
 
     checkpoint_path = Path(cfg.checkpoint_path)
     if not checkpoint_path.exists():
-        print(f"Error: Checkpoint not found: {checkpoint_path}")
+        logger.error(f"Checkpoint not found: {checkpoint_path}")
         return
 
-    print("=" * 60)
-    print("Evaluation Configuration:")
-    print("=" * 60)
-    print(f"Checkpoint: {checkpoint_path}")
-    print(f"Dataset: {cfg.dataset.name}")
-    print(f"Model: {cfg.model.name}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Evaluation Configuration:")
+    logger.info("=" * 60)
+    logger.info(f"Checkpoint: {checkpoint_path}")
+    logger.info(f"Dataset: {cfg.dataset.name}")
+    logger.info(f"Model: {cfg.model.name}")
+    logger.info("=" * 60)
 
     # Load checkpoint to get training config
-    print("\nLoading checkpoint...")
+    logger.info("Loading checkpoint...")
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
 
     # Use checkpoint config if available (Lightning saves hyperparameters)
     if "hyper_parameters" in checkpoint and "cfg" in checkpoint["hyper_parameters"]:
         train_cfg = OmegaConf.create(checkpoint["hyper_parameters"]["cfg"])
-        print("Using configuration from checkpoint")
+        logger.info("Using configuration from checkpoint")
         # Override dataset if specified differently
         if hasattr(cfg, "dataset"):
             train_cfg.dataset = cfg.dataset
     else:
         train_cfg = cfg
-        print("Using current configuration")
+        logger.info("Using current configuration")
 
     # Get accelerator
     accelerator = get_accelerator(cfg)
-    print(f"Accelerator: {accelerator}")
+    logger.info(f"Accelerator: {accelerator}")
 
     # Create model
-    print("\nCreating model...")
+    logger.info("Creating model...")
     model = create_model(train_cfg)
     model_info = get_model_info(model)
-    print(f"Model: {train_cfg.model.name}")
-    print(f"Total parameters: {model_info['total_params']:,}")
+    logger.info(f"Model: {train_cfg.model.name}")
+    logger.info(f"Total parameters: {model_info['total_params']:,}")
 
     # Load Lightning checkpoint
     lightning_module = ImageClassificationModule.load_from_checkpoint(
@@ -125,20 +135,20 @@ def main(cfg: DictConfig) -> None:
         model=model,
         cfg=train_cfg,
     )
-    print("Loaded Lightning checkpoint successfully")
+    logger.info("Loaded Lightning checkpoint successfully")
 
     # Create evaluation module with the loaded model
     eval_module = EvaluationModule(model=lightning_module.model, cfg=train_cfg)
 
     # Create DataModule
-    print("\nCreating datasets...")
+    logger.info("Creating datasets...")
     datamodule = ImageClassificationDataModule(cfg=train_cfg)
     datamodule.setup("test")
 
     if datamodule.val_dataset:
-        print(f"Val samples: {len(datamodule.val_dataset):,}")
+        logger.info(f"Val samples: {len(datamodule.val_dataset):,}")
     if datamodule.test_dataset:
-        print(f"Test samples: {len(datamodule.test_dataset):,}")
+        logger.info(f"Test samples: {len(datamodule.test_dataset):,}")
 
     # Create trainer for evaluation
     trainer = L.Trainer(
@@ -149,9 +159,9 @@ def main(cfg: DictConfig) -> None:
     )
 
     # Evaluate on validation set
-    print("\n" + "=" * 60)
-    print("Validation Set Results:")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Validation Set Results:")
+    logger.info("=" * 60)
 
     # Reset predictions
     eval_module.all_preds = []
@@ -161,15 +171,15 @@ def main(cfg: DictConfig) -> None:
     trainer.test(eval_module, dataloaders=datamodule.val_dataloader())
 
     val_results = eval_module.eval_results
-    print(f"  Accuracy: {val_results['accuracy']:.4f}")
-    print(f"  Total samples: {val_results['total_samples']}")
+    logger.info(f"  Accuracy: {val_results['accuracy']:.4f}")
+    logger.info(f"  Total samples: {val_results['total_samples']}")
 
     # Evaluate on test set if available
     test_results = None
     if datamodule.test_dataset is not None:
-        print("\n" + "=" * 60)
-        print("Test Set Results:")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info("Test Set Results:")
+        logger.info("=" * 60)
 
         # Reset predictions
         eval_module.all_preds = []
@@ -178,12 +188,12 @@ def main(cfg: DictConfig) -> None:
         trainer.test(eval_module, dataloaders=datamodule.test_dataloader())
 
         test_results = eval_module.eval_results
-        print(f"  Accuracy: {test_results['accuracy']:.4f}")
-        print(f"  Total samples: {test_results['total_samples']}")
+        logger.info(f"  Accuracy: {test_results['accuracy']:.4f}")
+        logger.info(f"  Total samples: {test_results['total_samples']}")
 
-        print("\nPer-class Accuracy:")
+        logger.info("Per-class Accuracy:")
         for cls, acc in test_results["per_class"].items():
-            print(f"  {cls}: {acc:.4f}")
+            logger.info(f"  {cls}: {acc:.4f}")
 
     # Save results
     results_path = checkpoint_path.parent / "evaluation_results.json"
@@ -204,7 +214,7 @@ def main(cfg: DictConfig) -> None:
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\nResults saved to: {results_path}")
+    logger.info(f"Results saved to: {results_path}")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,9 @@
+import logging
+
 import torch
 from omegaconf import DictConfig
+
+logger = logging.getLogger(__name__)
 
 
 def get_device(cfg: DictConfig) -> str:
@@ -18,20 +22,20 @@ def get_device(cfg: DictConfig) -> str:
 
     if device == "auto":
         if torch.cuda.is_available():
-            print("Using CUDA (GPU)")
+            logger.info("Using CUDA (GPU)")
             return "cuda"
         elif torch.backends.mps.is_available():
-            print("Using MPS (Apple Silicon)")
+            logger.info("Using MPS (Apple Silicon)")
             return "mps"
         else:
-            print("Using CPU")
+            logger.info("Using CPU")
             return "cpu"
 
     if device == "cuda" and not torch.cuda.is_available():
-        print("CUDA not available, falling back to CPU")
+        logger.warning("CUDA not available, falling back to CPU")
         return "cpu"
     if device == "mps" and not torch.backends.mps.is_available():
-        print("MPS not available, falling back to CPU")
+        logger.warning("MPS not available, falling back to CPU")
         return "cpu"
 
     return device

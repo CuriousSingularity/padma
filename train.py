@@ -16,6 +16,7 @@ Usage:
     python train.py dataset.name=cifar100 model.num_classes=100
 """
 
+import logging
 from pathlib import Path
 
 import hydra
@@ -33,16 +34,25 @@ from padma.models import create_model, get_model_info
 from padma.trainers import ImageClassificationModule, ImageClassificationDataModule
 from padma.utils import set_seed, get_accelerator, get_precision
 
+logger = logging.getLogger(__name__)
+
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(cfg: DictConfig) -> None:
     """Main training function."""
-    # Print configuration
-    print("=" * 60)
-    print("Configuration:")
-    print("=" * 60)
-    print(OmegaConf.to_yaml(cfg))
-    print("=" * 60)
+    # Setup logging
+    logging.basicConfig(
+        level=getattr(logging, cfg.logging.level),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # Log configuration
+    logger.info("=" * 60)
+    logger.info("Configuration:")
+    logger.info("=" * 60)
+    logger.info("\n" + OmegaConf.to_yaml(cfg))
+    logger.info("=" * 60)
 
     # Set random seed
     set_seed(cfg.seed)
@@ -54,35 +64,35 @@ def main(cfg: DictConfig) -> None:
     # Save configuration
     config_path = output_dir / "config.yaml"
     OmegaConf.save(cfg, config_path)
-    print(f"Configuration saved to: {config_path}")
+    logger.info(f"Configuration saved to: {config_path}")
 
     # Create model
-    print("\nCreating model...")
+    logger.info("Creating model...")
     model = create_model(cfg)
     model_info = get_model_info(model)
-    print(f"Model: {cfg.model.name}")
-    print(f"Total parameters: {model_info['total_params']:,}")
-    print(f"Trainable parameters: {model_info['trainable_params']:,}")
+    logger.info(f"Model: {cfg.model.name}")
+    logger.info(f"Total parameters: {model_info['total_params']:,}")
+    logger.info(f"Trainable parameters: {model_info['trainable_params']:,}")
 
     # Create Lightning module
     lightning_module = ImageClassificationModule(model=model, cfg=cfg)
 
     # Create DataModule
-    print("\nCreating datasets...")
+    logger.info("Creating datasets...")
     datamodule = ImageClassificationDataModule(cfg=cfg)
     datamodule.setup("fit")
     dataset_info = datamodule.get_dataset_info()
-    print(f"Dataset: {dataset_info['dataset_name']}")
-    print(f"Train samples: {dataset_info['train_samples']:,}")
-    print(f"Val samples: {dataset_info['val_samples']:,}")
+    logger.info(f"Dataset: {dataset_info['dataset_name']}")
+    logger.info(f"Train samples: {dataset_info['train_samples']:,}")
+    logger.info(f"Val samples: {dataset_info['val_samples']:,}")
     if "test_samples" in dataset_info:
-        print(f"Test samples: {dataset_info['test_samples']:,}")
+        logger.info(f"Test samples: {dataset_info['test_samples']:,}")
 
     # Get accelerator and precision settings
     accelerator = get_accelerator(cfg)
     precision = get_precision(cfg, accelerator)
-    print(f"\nAccelerator: {accelerator}")
-    print(f"Precision: {precision}")
+    logger.info(f"Accelerator: {accelerator}")
+    logger.info(f"Precision: {precision}")
 
     # Setup callbacks
     callbacks = []
@@ -137,23 +147,23 @@ def main(cfg: DictConfig) -> None:
     )
 
     # Train
-    print("\nStarting training...")
+    logger.info("Starting training...")
     trainer.fit(lightning_module, datamodule=datamodule)
 
-    # Print results
-    print("\n" + "=" * 60)
-    print("Training Complete!")
-    print("=" * 60)
-    print(f"Best model checkpoint: {checkpoint_callback.best_model_path}")
-    print(f"Best {cfg.checkpoint.monitor_metric}: {checkpoint_callback.best_model_score:.4f}")
-    print(f"Checkpoints saved to: {cfg.checkpoint.save_dir}")
-    print(f"TensorBoard logs: {output_dir / 'tensorboard'}")
-    print("\nTo view TensorBoard logs, run:")
-    print(f"  tensorboard --logdir={output_dir / 'tensorboard'}")
+    # Log results
+    logger.info("=" * 60)
+    logger.info("Training Complete!")
+    logger.info("=" * 60)
+    logger.info(f"Best model checkpoint: {checkpoint_callback.best_model_path}")
+    logger.info(f"Best {cfg.checkpoint.monitor_metric}: {checkpoint_callback.best_model_score:.4f}")
+    logger.info(f"Checkpoints saved to: {cfg.checkpoint.save_dir}")
+    logger.info(f"TensorBoard logs: {output_dir / 'tensorboard'}")
+    logger.info("To view TensorBoard logs, run:")
+    logger.info(f"  tensorboard --logdir={output_dir / 'tensorboard'}")
 
     # Test on test set if available
     if datamodule.test_dataset is not None:
-        print("\nEvaluating on test set...")
+        logger.info("Evaluating on test set...")
         trainer.test(lightning_module, datamodule=datamodule, ckpt_path="best")
 
 

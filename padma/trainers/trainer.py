@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional, Dict, Any
 from pathlib import Path
@@ -11,6 +12,8 @@ from tqdm import tqdm
 from omegaconf import DictConfig, OmegaConf
 
 from padma.utils import MetricsTracker, get_device
+
+logger = logging.getLogger(__name__)
 
 
 class Trainer:
@@ -279,7 +282,7 @@ class Trainer:
 
         if is_best and self.cfg.checkpoint.save_best:
             torch.save(checkpoint, self.checkpoint_dir / "best.pt")
-            print(f"Saved best model with {self.cfg.checkpoint.monitor_metric}: {metrics.get(self.cfg.checkpoint.monitor_metric.replace('val_', ''), 0):.4f}")
+            logger.info(f"Saved best model with {self.cfg.checkpoint.monitor_metric}: {metrics.get(self.cfg.checkpoint.monitor_metric.replace('val_', ''), 0):.4f}")
 
     def load_checkpoint(self, checkpoint_path: str) -> None:
         """Load model checkpoint."""
@@ -294,15 +297,15 @@ class Trainer:
         self.current_epoch = checkpoint["epoch"]
         self.global_step = checkpoint["global_step"]
 
-        print(f"Loaded checkpoint from epoch {self.current_epoch}")
+        logger.info(f"Loaded checkpoint from epoch {self.current_epoch}")
 
     def train(self) -> Dict[str, Any]:
         """Run the full training loop."""
-        print(f"Starting training for {self.cfg.training.epochs} epochs")
-        print(f"Device: {self.device}")
-        print(f"Model: {self.cfg.model.name}")
-        print(f"Dataset: {self.cfg.dataset.name}")
-        print(f"TensorBoard logs: {self.cfg.logging.tensorboard_dir}")
+        logger.info(f"Starting training for {self.cfg.training.epochs} epochs")
+        logger.info(f"Device: {self.device}")
+        logger.info(f"Model: {self.cfg.model.name}")
+        logger.info(f"Dataset: {self.cfg.dataset.name}")
+        logger.info(f"TensorBoard logs: {self.cfg.logging.tensorboard_dir}")
 
         best_metrics = {}
 
@@ -311,11 +314,11 @@ class Trainer:
 
             # Train
             train_metrics = self.train_epoch()
-            print(f"Epoch {epoch + 1} - Train: {train_metrics}")
+            logger.info(f"Epoch {epoch + 1} - Train: {train_metrics}")
 
             # Validate
             val_metrics = self.validate()
-            print(f"Epoch {epoch + 1} - Val: {val_metrics}")
+            logger.info(f"Epoch {epoch + 1} - Val: {val_metrics}")
 
             # Step plateau scheduler
             if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
@@ -350,7 +353,7 @@ class Trainer:
             # Early stopping
             if self.cfg.training.early_stopping.enabled:
                 if self.early_stop_counter >= self.cfg.training.early_stopping.patience:
-                    print(f"Early stopping triggered after {epoch + 1} epochs")
+                    logger.info(f"Early stopping triggered after {epoch + 1} epochs")
                     break
 
         self.writer.close()
