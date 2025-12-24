@@ -15,8 +15,6 @@ Usage:
 
 import json
 from pathlib import Path
-from typing import Dict, Any
-from collections import defaultdict
 
 import hydra
 import lightning as L
@@ -25,40 +23,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from padma.models import create_model, get_model_info
 from padma.trainers import ImageClassificationModule, ImageClassificationDataModule
-
-
-def get_accelerator(cfg: DictConfig) -> str:
-    """Get accelerator type based on configuration."""
-    device = cfg.get("device", "auto")
-    if device == "auto":
-        if torch.cuda.is_available():
-            return "cuda"
-        elif torch.backends.mps.is_available():
-            return "mps"
-        return "cpu"
-    return device
-
-
-def compute_per_class_metrics(
-    preds: list, targets: list, num_classes: int
-) -> Dict[str, Any]:
-    """Compute per-class accuracy."""
-    correct = defaultdict(int)
-    total = defaultdict(int)
-
-    for pred, target in zip(preds, targets):
-        total[target] += 1
-        if pred == target:
-            correct[target] += 1
-
-    per_class_acc = {}
-    for cls in range(num_classes):
-        if total[cls] > 0:
-            per_class_acc[f"class_{cls}"] = correct[cls] / total[cls]
-        else:
-            per_class_acc[f"class_{cls}"] = 0.0
-
-    return per_class_acc
+from padma.utils import get_accelerator, compute_per_class_metrics
 
 
 class EvaluationModule(L.LightningModule):
