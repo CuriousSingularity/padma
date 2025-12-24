@@ -1,9 +1,8 @@
 # Model configuration
-name: resnet50  # Any model name from timm
-pretrained: true  # Load pretrained weights from timm
+_target_: padma.models.model_factory.TimmModelFactory
+model_name: resnet50  # Any model name from timm
 num_classes: 10  # Number of output classes
-drop_rate: 0.0  # Dropout rate
-drop_path_rate: 0.0  # Drop path rate (for vision transformers)
-
-# Optional: freeze backbone layers
-freeze_backbone: false
+pretrained: true  # Load pretrained weights from timm
+drop_rate: null  # Dropout rate (null = use architecture-specific default)
+drop_path_rate: null  # Drop path rate (null = use architecture-specific default)
+freeze_backbone: false  # Freeze backbone layers
