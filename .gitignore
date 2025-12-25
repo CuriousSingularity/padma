@@ -161,3 +161,6 @@ cython_debug/
 
 # Hydra
 outputs
+
+# Datasets
+data/
