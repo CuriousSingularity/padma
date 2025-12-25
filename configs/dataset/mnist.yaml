@@ -5,18 +5,25 @@ data_dir: ./data
 image_size: 224
 train_val_split: 0.9
 
-# Training augmentation
-train_augmentation:
-  random_crop: false
-  horizontal_flip: false
-  color_jitter: false
-  auto_augment: null
+# Training transforms for MNIST
+train_transforms:
+  - _target_: torchvision.transforms.RandomCrop
+    size: 28
+    padding: 4
 
-# Validation augmentation
-val_augmentation:
-  center_crop: true
+  - _target_: torchvision.transforms.RandomRotation
+    degrees: 10
 
-# Normalization (ImageNet defaults, will be used for consistency)
-normalize:
-  mean: [0.485, 0.456, 0.406]
-  std: [0.229, 0.224, 0.225]
+  - _target_: torchvision.transforms.ToTensor
+
+  - _target_: torchvision.transforms.Normalize
+    mean: [0.1307]
+    std: [0.3081]
+
+# Validation/test transforms for MNIST
+val_transforms:
+  - _target_: torchvision.transforms.ToTensor
+
+  - _target_: torchvision.transforms.Normalize
+    mean: [0.1307]
+    std: [0.3081]
