@@ -264,7 +264,7 @@ python train.py callbacks.early_stopping.patience=15
 padma/
 ├── models/
 │   ├── base.py          # Utilities (freeze, load, info)
-│   └── model_factory.py # Unified TimmModelFactory for all architectures
+│   └── model_factory.py # Unified ModelFactory for timm and time series models
 ├── datasets/
 │   ├── base.py          # Transforms, dataloaders
 │   ├── mnist.py         # MNIST dataset
@@ -326,6 +326,61 @@ python train.py dataset=custom dataset.data_dir=./my_dataset model.num_classes=2
 ```
 
 That's it! No need to write custom dataset classes or data loading code. Focus on experimentation, not boilerplate.
+
+## 📡 Time Series Classification
+
+Padma now supports time series classification alongside image classification, providing the same configuration-driven workflow for temporal data.
+
+### Available Time Series Datasets
+
+| Dataset | Name | Channels | Timesteps | Classes | Description |
+|---------|------|----------|-----------|---------|-------------|
+| ECG5000 | `ecg5000` | 1 | 140 | 5 | Univariate heartbeat classification (ECG signals) |
+| UCI HAR | `uci_har` | 9 | 128 | 6 | Multivariate human activity recognition (smartphone sensors) |
+
+### Available Time Series Models
+
+| Model | Description | Parameters | Best For |
+|-------|-------------|------------|----------|
+| **1D CNN** | Convolutional neural network for sequences | ~1-5M | Fast training, good baseline |
+| **LSTM** | Bidirectional LSTM for sequence modeling | ~1-10M | Long-term dependencies |
+| **GRU** | Bidirectional GRU (lighter than LSTM) | ~1-8M | Faster training than LSTM |
+| **1D Transformer** | Attention-based sequence model | ~5-20M | State-of-the-art performance |
+
+### Quick Start with Time Series
+
+```bash
+# ECG5000 experiments (univariate time series)
+python train.py +experiment=ecg5000_cnn1d          # 1D CNN (fast)
+python train.py +experiment=ecg5000_lstm           # LSTM
+python train.py +experiment=ecg5000_gru            # GRU
+python train.py +experiment=ecg5000_transformer    # Transformer
+
+# UCI HAR experiments (multivariate time series)
+python train.py +experiment=uci_har_cnn1d          # 1D CNN
+python train.py +experiment=uci_har_lstm           # LSTM
+python train.py +experiment=uci_har_transformer    # Transformer
+```
+
+### Custom Hyperparameters
+
+```bash
+# Adjust model architecture
+python train.py +experiment=ecg5000_cnn1d model.filters=[128,256,512]
+python train.py +experiment=ecg5000_lstm model.hidden_size=256 model.num_layers=3
+
+# Adjust training parameters
+python train.py +experiment=uci_har_transformer training.batch_size=32 training.epochs=200
+```
+
+### Monitoring
+
+Time series experiments log the same metrics as image classification (accuracy, precision, recall, F1) with the prefix `ts_` in TensorBoard.
+
+```bash
+# View time series training logs
+tensorboard --logdir=outputs/
+```
 
 ## 📜 License
 
