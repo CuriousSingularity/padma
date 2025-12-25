@@ -1,8 +1,12 @@
 # Model configuration
-_target_: padma.models.model_factory.TimmModelFactory
-model_name: resnet50  # Any model name from timm
+_target_: padma.models.model_factory.ModelFactory.create
+model_name: resnet50  # Any model name from timm or time series models
 num_classes: 10  # Number of output classes
+# Timm-specific parameters
 pretrained: true  # Load pretrained weights from timm
 drop_rate: null  # Dropout rate (null = use architecture-specific default)
 drop_path_rate: null  # Drop path rate (null = use architecture-specific default)
 freeze_backbone: false  # Freeze backbone layers
+# Time series-specific parameters (optional, only needed for time series models)
+input_channels: null  # Number of input channels for time series models
+sequence_length: null  # Length of time series sequence (required for Transformer)
