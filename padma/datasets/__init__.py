@@ -5,6 +5,8 @@ from .mnist import create_mnist_dataset
 from .cifar import create_cifar10_dataset, create_cifar100_dataset
 from .imagenet import create_imagenet_dataset
 from .custom import create_custom_dataset
+from .ecg5000 import create_ecg5000_dataset
+from .uci_har import create_uci_har_dataset
 
 __all__ = [
     "create_dataloaders",
@@ -13,4 +15,6 @@ __all__ = [
     "create_cifar100_dataset",
     "create_imagenet_dataset",
     "create_custom_dataset",
+    "create_ecg5000_dataset",
+    "create_uci_har_dataset",
 ]

@@ -64,19 +64,28 @@ def main(cfg: DictConfig) -> None:
 
     # Create model
     logger.info("Creating model...")
-    model_factory = instantiate(cfg.model)
-    model = model_factory.create()
+    model = instantiate(cfg.model)
     model_info = get_model_info(model)
     logger.info(f"Model: {cfg.model.model_name}")
     logger.info(f"Total parameters: {model_info['total_params']:,}")
     logger.info(f"Trainable parameters: {model_info['trainable_params']:,}")
 
-    # Create Lightning module
-    lightning_module = ImageClassificationModule(model=model, cfg=cfg)
+    # Detect model type and use appropriate modules
+    from padma.models.model_factory import ModelFactory
+    is_timeseries = cfg.model.model_name.lower() in ModelFactory.TIMESERIES_MODELS
+
+    if is_timeseries:
+        from padma.trainers import TimeSeriesClassificationModule, TimeSeriesDataModule
+        logger.info("Using time series classification modules")
+        lightning_module = TimeSeriesClassificationModule(model=model, cfg=cfg)
+        datamodule = TimeSeriesDataModule(cfg=cfg)
+    else:
+        logger.info("Using image classification modules")
+        lightning_module = ImageClassificationModule(model=model, cfg=cfg)
+        datamodule = ImageClassificationDataModule(cfg=cfg)
 
     # Create DataModule
     logger.info("Creating datasets...")
-    datamodule = ImageClassificationDataModule(cfg=cfg)
     datamodule.setup("fit")
     dataset_info = datamodule.get_dataset_info()
     logger.info(f"Dataset: {dataset_info['dataset_name']}")
