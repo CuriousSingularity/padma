@@ -21,10 +21,14 @@ model:
 dataset:
   data_dir: /path/to/imagenet
   image_size: 224
-  train_augmentation:
+
+# Transformation overrides (use auto-augment for ViT)
+transformation:
+  train:
     random_crop: true
     horizontal_flip: true
-    auto_augment: rand-m9-mstd0.5
+    auto_augment: randaugment
+    rand_augment_magnitude: 9
 
 # Training overrides
 training:

@@ -19,7 +19,10 @@ model:
 dataset:
   data_dir: ./data
   image_size: 224
-  train_augmentation:
+
+# Transformation overrides (MNIST preset already disables these, but keeping for clarity)
+transformation:
+  train:
     random_crop: false
     horizontal_flip: false
 
