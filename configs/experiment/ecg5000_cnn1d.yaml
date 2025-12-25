@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+  - override /model: timeseries_cnn1d
+  - override /dataset: ecg5000
+  - override /training: default
+
+experiment_name: ecg5000_cnn1d
+
+model:
+  input_channels: 1
+  sequence_length: 140
+  num_classes: 5
+  filters: [64, 128, 256]
+  kernel_size: 3
+  dropout: 0.5
+
+dataset:
+  data_dir: ./data
+
+training:
+  epochs: 100
+  batch_size: 64
+  optimizer:
+    name: adam
+    lr: 1e-3
+    weight_decay: 1e-4
+  scheduler:
+    name: cosine
+    warmup_epochs: 10
+    min_lr: 1e-6

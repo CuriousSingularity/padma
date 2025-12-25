@@ -1,0 +1,10 @@
+_target_: padma.models.model_factory.ModelFactory.create
+model_name: transformer1d
+input_channels: 1  # Will be overridden in experiments
+sequence_length: 140  # Will be overridden in experiments
+num_classes: 5  # Will be overridden in experiments
+d_model: 128
+nhead: 8
+num_layers: 4
+dim_feedforward: 512
+dropout: 0.1

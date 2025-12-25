@@ -1,0 +1,8 @@
+_target_: padma.models.model_factory.ModelFactory.create
+model_name: cnn1d
+input_channels: 1  # Will be overridden in experiments
+sequence_length: 140  # Will be overridden in experiments
+num_classes: 5  # Will be overridden in experiments
+filters: [64, 128, 256]
+kernel_size: 3
+dropout: 0.5

@@ -1,0 +1,32 @@
+# @package _global_
+defaults:
+  - override /model: timeseries_transformer
+  - override /dataset: uci_har
+  - override /training: default
+
+experiment_name: uci_har_transformer
+
+model:
+  input_channels: 9
+  sequence_length: 128
+  num_classes: 6
+  d_model: 128
+  nhead: 8
+  num_layers: 4
+  dim_feedforward: 512
+  dropout: 0.1
+
+dataset:
+  data_dir: ./data
+
+training:
+  epochs: 150
+  batch_size: 64
+  optimizer:
+    name: adamw
+    lr: 5e-4
+    weight_decay: 1e-2
+  scheduler:
+    name: cosine
+    warmup_epochs: 15
+    min_lr: 1e-6

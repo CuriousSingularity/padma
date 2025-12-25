@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+  - override /model: timeseries_gru
+  - override /dataset: uci_har
+  - override /training: default
+
+experiment_name: uci_har_gru
+
+model:
+  input_channels: 9
+  num_classes: 6
+  hidden_size: 128
+  num_layers: 2
+  bidirectional: true
+  dropout: 0.5
+
+dataset:
+  data_dir: ./data
+
+training:
+  epochs: 100
+  batch_size: 128
+  optimizer:
+    name: adam
+    lr: 1e-3
+    weight_decay: 1e-4
+  scheduler:
+    name: cosine
+    warmup_epochs: 5
+    min_lr: 1e-6

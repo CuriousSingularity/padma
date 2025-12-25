@@ -1,0 +1,17 @@
+_target_: padma.datasets.ecg5000.create_ecg5000_dataset
+name: ecg5000
+data_dir: ./data
+train_val_split: 0.9
+normalize: true
+normalize_method: zscore  # or minmax
+
+# Training augmentation (optional)
+train_augmentation:
+  jitter: true
+  jitter_sigma: 0.03
+  scaling: false
+  scaling_sigma: 0.1
+  time_warp: false
+  time_warp_sigma: 0.2
+
+seed: 42

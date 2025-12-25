@@ -1,0 +1,17 @@
+_target_: padma.datasets.uci_har.create_uci_har_dataset
+name: uci_har
+data_dir: ./data
+train_val_split: 0.9
+normalize: true
+normalize_method: zscore  # or minmax
+
+# Training augmentation (optional)
+train_augmentation:
+  jitter: false
+  jitter_sigma: 0.03
+  scaling: false
+  scaling_sigma: 0.1
+  time_warp: false
+  time_warp_sigma: 0.2
+
+seed: 42

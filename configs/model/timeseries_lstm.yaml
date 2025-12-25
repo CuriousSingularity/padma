@@ -1,0 +1,8 @@
+_target_: padma.models.model_factory.ModelFactory.create
+model_name: lstm
+input_channels: 1  # Will be overridden in experiments
+num_classes: 5  # Will be overridden in experiments
+hidden_size: 128
+num_layers: 2
+bidirectional: true
+dropout: 0.5
