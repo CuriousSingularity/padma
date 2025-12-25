@@ -9,64 +9,125 @@ from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 def get_transforms(cfg: DictConfig, is_training: bool = True) -> transforms.Compose:
     """
-    Create data transforms based on configuration.
+    Create data transformations based on configuration.
+
+    Builds a complete transformation pipeline including:
+    - Geometric transforms (resize, crop, flip, rotation)
+    - Color transforms (jitter)
+    - Auto-augmentation (RandAugment, AugMix, AutoAugment)
+    - Normalization
+    - Advanced transforms (random erasing)
 
     Args:
-        cfg: Dataset configuration
-        is_training: Whether to create training transforms
+        cfg: Full configuration (expects cfg.dataset and cfg.transformation)
+        is_training: Whether to create training or validation transforms
 
     Returns:
-        Composed transforms
+        Composed transforms pipeline
     """
     image_size = cfg.dataset.image_size
-    mean = cfg.dataset.normalize.get("mean", IMAGENET_DEFAULT_MEAN)
-    std = cfg.dataset.normalize.get("std", IMAGENET_DEFAULT_STD)
+    transform_cfg = cfg.transformation.train if is_training else cfg.transformation.val
+    norm_cfg = cfg.transformation.normalize
+
+    transform_list = []
+
+    # Grayscale conversion (for MNIST and similar datasets)
+    if transform_cfg.get("grayscale_to_rgb", False):
+        transform_list.append(transforms.Grayscale(num_output_channels=3))
 
     if is_training:
-        aug_cfg = cfg.dataset.train_augmentation
-        transform_list = []
-
-        if aug_cfg.get("random_crop", True):
-            transform_list.append(transforms.RandomResizedCrop(image_size))
+        # Training transforms
+        if transform_cfg.get("random_crop", True):
+            transform_list.append(
+                transforms.RandomResizedCrop(
+                    image_size,
+                    scale=tuple(transform_cfg.get("random_crop_scale", [0.08, 1.0])),
+                    ratio=tuple(transform_cfg.get("random_crop_ratio", [0.75, 1.333])),
+                )
+            )
         else:
             transform_list.append(transforms.Resize((image_size, image_size)))
 
-        if aug_cfg.get("horizontal_flip", True):
-            transform_list.append(transforms.RandomHorizontalFlip())
-
-        if aug_cfg.get("color_jitter", False):
+        if transform_cfg.get("horizontal_flip", True):
             transform_list.append(
-                transforms.ColorJitter(
-                    brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1
+                transforms.RandomHorizontalFlip(
+                    p=transform_cfg.get("horizontal_flip_p", 0.5)
                 )
             )
 
-        if aug_cfg.get("auto_augment"):
-            aa_policy = aug_cfg.auto_augment
-            if aa_policy.startswith("rand"):
-                transform_list.append(transforms.RandAugment())
-            elif aa_policy == "augmix":
+        if transform_cfg.get("vertical_flip", False):
+            transform_list.append(
+                transforms.RandomVerticalFlip(
+                    p=transform_cfg.get("vertical_flip_p", 0.5)
+                )
+            )
+
+        if transform_cfg.get("rotation", False):
+            transform_list.append(
+                transforms.RandomRotation(
+                    degrees=transform_cfg.get("rotation_degrees", 15)
+                )
+            )
+
+        if transform_cfg.get("color_jitter", False):
+            transform_list.append(
+                transforms.ColorJitter(
+                    brightness=transform_cfg.get("color_jitter_brightness", 0.4),
+                    contrast=transform_cfg.get("color_jitter_contrast", 0.4),
+                    saturation=transform_cfg.get("color_jitter_saturation", 0.4),
+                    hue=transform_cfg.get("color_jitter_hue", 0.1),
+                )
+            )
+
+        # Auto-augmentation (mutually exclusive)
+        auto_augment = transform_cfg.get("auto_augment")
+        if auto_augment:
+            if auto_augment.lower() in ["rand", "randaugment"]:
+                transform_list.append(
+                    transforms.RandAugment(
+                        num_ops=transform_cfg.get("rand_augment_num_ops", 2),
+                        magnitude=transform_cfg.get("rand_augment_magnitude", 9),
+                    )
+                )
+            elif auto_augment.lower() == "augmix":
                 transform_list.append(transforms.AugMix())
-
-        transform_list.extend([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std),
-        ])
-
-        return transforms.Compose(transform_list)
+            elif auto_augment.lower() == "autoaugment":
+                transform_list.append(
+                    transforms.AutoAugment(transforms.AutoAugmentPolicy.IMAGENET)
+                )
     else:
-        val_aug_cfg = cfg.dataset.val_augmentation
-        transform_list = [transforms.Resize(int(image_size * 1.14))]
+        # Validation/test transforms
+        resize_scale = transform_cfg.get("resize_scale", 1.14)
+        if resize_scale != 1.0:
+            transform_list.append(
+                transforms.Resize(int(image_size * resize_scale))
+            )
+        else:
+            transform_list.append(transforms.Resize((image_size, image_size)))
 
-        if val_aug_cfg.get("center_crop", True):
+        if transform_cfg.get("center_crop", True):
             transform_list.append(transforms.CenterCrop(image_size))
 
-        transform_list.extend([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std),
-        ])
+    # Convert to tensor
+    transform_list.append(transforms.ToTensor())
 
-        return transforms.Compose(transform_list)
+    # Normalization (always included as part of transformation)
+    if norm_cfg.get("enabled", True):
+        mean = tuple(norm_cfg.get("mean", IMAGENET_DEFAULT_MEAN))
+        std = tuple(norm_cfg.get("std", IMAGENET_DEFAULT_STD))
+        transform_list.append(transforms.Normalize(mean=mean, std=std))
+
+    # Random erasing (applied after normalization, training only)
+    if is_training and transform_cfg.get("random_erasing", False):
+        transform_list.append(
+            transforms.RandomErasing(
+                p=transform_cfg.get("random_erasing_p", 0.25),
+                scale=tuple(transform_cfg.get("random_erasing_scale", [0.02, 0.33])),
+                ratio=tuple(transform_cfg.get("random_erasing_ratio", [0.3, 3.3])),
+            )
+        )
+
+    return transforms.Compose(transform_list)
 
 
 def split_dataset(
@@ -140,3 +201,5 @@ def create_dataloaders(
         )
 
     return train_loader, val_loader, test_loader
+
+
