@@ -216,6 +216,11 @@ configs/
 │   ├── default.yaml      # Standard callbacks
 │   ├── minimal.yaml      # Minimal callback setup
 │   └── early_stopping.yaml  # With early stopping enabled
+├── transformation/
+│   ├── default.yaml      # Standard ImageNet-style transforms
+│   ├── mnist.yaml        # MNIST-specific transforms
+│   ├── cifar10.yaml      # CIFAR-10/100 transforms
+│   └── imagenet.yaml     # Advanced ImageNet transforms with auto-augmentation
 └── experiment/
     ├── mnist_mobilenet.yaml
     ├── mnist_resnet.yaml
@@ -258,6 +263,27 @@ python train.py callbacks.model_checkpoint.save_top_k=3
 python train.py callbacks.early_stopping.patience=15
 ```
 
+**Data Augmentation & Transforms**:
+```bash
+# Use different transformation presets
+python train.py transformation=default     # Standard ImageNet transforms (default)
+python train.py transformation=mnist       # MNIST-specific transforms
+python train.py transformation=cifar10     # CIFAR-10/100 transforms
+python train.py transformation=imagenet    # Advanced ImageNet with RandAugment
+
+# Override specific transform parameters
+python train.py transformation=default \
+    'transformation.train_transforms[1].p=0.7'  # Change flip probability
+
+python train.py transformation=default \
+    'transformation.train_transforms[2].brightness=0.5'  # Adjust ColorJitter
+
+# View all available transforms and parameters
+cat configs/transformation/README.md
+```
+
+All transformation configs use Hydra's instantiation system, allowing you to modify any torchvision transform parameter through YAML or command-line overrides. See `configs/transformation/README.md` for detailed documentation.
+
 ## 📂 Project Structure
 
 ```
@@ -266,7 +292,7 @@ padma/
 │   ├── base.py          # Utilities (freeze, load, info)
 │   └── model_factory.py # Unified ModelFactory for timm and time series models
 ├── datasets/
-│   ├── base.py          # Transforms, dataloaders
+│   ├── base.py          # Dataloaders and dataset utilities
 │   ├── mnist.py         # MNIST dataset
 │   ├── cifar.py         # CIFAR-10/100
 │   ├── imagenet.py      # ImageNet
@@ -278,6 +304,7 @@ padma/
     ├── device.py        # Device detection
     ├── metrics.py       # Metrics tracking
     ├── callbacks.py     # Callback factory for Lightning
+    ├── transforms.py    # Transform creation from Hydra configs
     └── reproducibility.py  # Seed setting
 ```
 
