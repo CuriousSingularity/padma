@@ -3,7 +3,6 @@ defaults:
   - dataset: default
   - training: default
   - callbacks: default
-  - transformation: default  # Default transformation preset
   - _self_
 
 # Output directory for checkpoints and logs

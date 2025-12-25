@@ -205,22 +205,17 @@ configs/
 │   └── default.yaml      # Model settings
 ├── dataset/
 │   ├── default.yaml      # Dataset settings (defaults to MNIST)
-│   ├── mnist.yaml        # MNIST-specific config
-│   ├── cifar10.yaml      # CIFAR-10 config
-│   ├── cifar100.yaml     # CIFAR-100 config
-│   ├── imagenet.yaml     # ImageNet config
-│   └── custom.yaml       # Custom dataset config
+│   ├── mnist.yaml        # MNIST-specific config (includes transforms)
+│   ├── cifar10.yaml      # CIFAR-10 config (includes transforms)
+│   ├── cifar100.yaml     # CIFAR-100 config (includes transforms)
+│   ├── imagenet.yaml     # ImageNet config (includes transforms)
+│   └── custom.yaml       # Custom dataset config (includes transforms)
 ├── training/
 │   └── default.yaml      # Training settings
 ├── callbacks/
 │   ├── default.yaml      # Standard callbacks
 │   ├── minimal.yaml      # Minimal callback setup
 │   └── early_stopping.yaml  # With early stopping enabled
-├── transformation/
-│   ├── default.yaml      # Standard ImageNet-style transforms
-│   ├── mnist.yaml        # MNIST-specific transforms
-│   ├── cifar10.yaml      # CIFAR-10/100 transforms
-│   └── imagenet.yaml     # Advanced ImageNet transforms with auto-augmentation
 └── experiment/
     ├── mnist_mobilenet.yaml
     ├── mnist_resnet.yaml
@@ -264,25 +259,26 @@ python train.py callbacks.early_stopping.patience=15
 ```
 
 **Data Augmentation & Transforms**:
+
+Transforms are defined directly in dataset configuration files using Hydra's `_target_` instantiation pattern. Each dataset config includes both `train_transforms` (with augmentation) and `val_transforms` (without augmentation).
+
 ```bash
-# Use different transformation presets
-python train.py transformation=default     # Standard ImageNet transforms (default)
-python train.py transformation=mnist       # MNIST-specific transforms
-python train.py transformation=cifar10     # CIFAR-10/100 transforms
-python train.py transformation=imagenet    # Advanced ImageNet with RandAugment
+# View transform configuration for a dataset
+cat configs/dataset/cifar10.yaml
 
 # Override specific transform parameters
-python train.py transformation=default \
-    'transformation.train_transforms[1].p=0.7'  # Change flip probability
+python train.py dataset=cifar10 \
+    'dataset.train_transforms[1].p=0.7'  # Change flip probability
 
-python train.py transformation=default \
-    'transformation.train_transforms[2].brightness=0.5'  # Adjust ColorJitter
+python train.py dataset=cifar10 \
+    'dataset.train_transforms[2].brightness=0.5'  # Adjust ColorJitter brightness
 
-# View all available transforms and parameters
-cat configs/transformation/README.md
+# Disable a specific transform by removing it from the list
+python train.py dataset=cifar10 \
+    'dataset.train_transforms[1]._target_=torchvision.transforms.Identity'
 ```
 
-All transformation configs use Hydra's instantiation system, allowing you to modify any torchvision transform parameter through YAML or command-line overrides. See `configs/transformation/README.md` for detailed documentation.
+All transforms use Hydra's instantiation system with `_target_` pointing to torchvision transform classes. You can modify any transform parameter through command-line overrides or by editing the dataset YAML files directly.
 
 ## 📂 Project Structure
 
