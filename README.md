@@ -43,17 +43,19 @@ pip install -e ".[dev]"
 ## 🚀 Quick Start
 
 ```bash
-# Train with default config (MNIST + ResNet50)
+# Complete training + evaluation pipeline (recommended)
+python train_and_evaluate.py                    # Train on train/val + evaluate on test
+python train_and_evaluate.py +experiment=mnist_mobilenet
+python train_and_evaluate.py +experiment=cifar10_resnet
+
+# Or run training and evaluation separately:
+
+# 1. Train only (uses train + val sets)
 python train.py
-
-# Train with MobileNetV3 (fastest)
-python train.py +experiment=mnist_mobilenet
-
-# Train with ResNet18
 python train.py +experiment=mnist_resnet
 
-# Train CIFAR-10 with ResNet
-python train.py +experiment=cifar10_resnet
+# 2. Evaluate only (uses test set)
+python evaluate.py checkpoint_path=outputs/<date>/<time>/checkpoints/best-epoch=XX.ckpt
 ```
 
 ## 🧪 Experimentation Made Easy
@@ -62,38 +64,60 @@ The power of Padma lies in its flexibility. Mix and match any model with any dat
 
 ```bash
 # Experiment 1: Try EfficientNet on CIFAR-100
-python train.py model.model_name=efficientnet_b0 dataset=cifar100 model.num_classes=100
+python train_and_evaluate.py model.model_name=efficientnet_b0 dataset=cifar100 model.num_classes=100
 
 # Experiment 2: Compare different Vision Transformer sizes on MNIST
-python train.py model.model_name=vit_tiny_patch16_224 dataset=mnist
-python train.py model.model_name=vit_small_patch16_224 dataset=mnist
-python train.py model.model_name=vit_base_patch16_224 dataset=mnist
+python train_and_evaluate.py model.model_name=vit_tiny_patch16_224 dataset=mnist
+python train_and_evaluate.py model.model_name=vit_small_patch16_224 dataset=mnist
+python train_and_evaluate.py model.model_name=vit_base_patch16_224 dataset=mnist
 
 # Experiment 3: Test lightweight models for edge deployment
-python train.py model.model_name=mobilenetv3_small_050 training.batch_size=256
-python train.py model.model_name=efficientnet_b0 training.batch_size=256
+python train_and_evaluate.py model.model_name=mobilenetv3_small_050 training.batch_size=256
+python train_and_evaluate.py model.model_name=efficientnet_b0 training.batch_size=256
 
 # Experiment 4: Your custom dataset with any pretrained model
-python train.py dataset=custom dataset.data_dir=./my_data model.model_name=resnet50 model.num_classes=20
+python train_and_evaluate.py dataset=custom dataset.data_dir=./my_data model.model_name=resnet50 model.num_classes=20
 
 # Experiment 5: Sweep hyperparameters
-python train.py training.optimizer.lr=1e-4 training.batch_size=64
-python train.py training.optimizer.lr=1e-3 training.batch_size=128
+python train_and_evaluate.py training.optimizer.lr=1e-4 training.batch_size=64
+python train_and_evaluate.py training.optimizer.lr=1e-3 training.batch_size=128
 ```
 
 No code changes needed - just configure and run. All experiments are automatically logged with full reproducibility.
 
-## 🎯 Training
+**Note:** Use `train_and_evaluate.py` for complete experiments (train + test evaluation), or use `train.py` if you only need to train and validate.
 
-### Basic Training
+## 🎯 Training & Evaluation
+
+Padma provides three workflows for training and evaluation:
+
+### 1. Complete Pipeline (Recommended)
+
+**`train_and_evaluate.py`** - Trains on train/val sets, then evaluates on test set
 
 ```bash
-python train.py
+# Complete workflow with default config
+python train_and_evaluate.py
+
+# With experiment presets
+python train_and_evaluate.py +experiment=mnist_mobilenet
+python train_and_evaluate.py +experiment=cifar10_resnet
+python train_and_evaluate.py +experiment=imagenet_vit
+
+# With custom parameters
+python train_and_evaluate.py model.model_name=efficientnet_b0 training.epochs=30
 ```
 
-### Using Experiment Configs
+This is the recommended approach as it provides a complete end-to-end pipeline: training → best checkpoint selection → test evaluation.
+
+### 2. Training Only
+
+**`train.py`** - Trains using train set, validates on val set, saves best checkpoint
 
 ```bash
+# Basic training
+python train.py
+
 # MNIST experiments
 python train.py +experiment=mnist_mobilenet    # Fastest (~1M params)
 python train.py +experiment=mnist_resnet       # ResNet18
@@ -101,25 +125,27 @@ python train.py +experiment=mnist_resnet       # ResNet18
 # CIFAR-10 experiments
 python train.py +experiment=cifar10_resnet     # ResNet50
 
-# ImageNet experiments
-python train.py +experiment=imagenet_vit       # ViT-Base
+# Override parameters
+python train.py model.model_name=resnet101
+python train.py training.epochs=50 training.batch_size=64 training.optimizer.lr=1e-3
+python train.py dataset=cifar100 model.num_classes=100
 ```
 
-### Override Parameters
+**Note:** `train.py` only trains and validates. It does **not** evaluate on the test set. Use `evaluate.py` or `train_and_evaluate.py` for test evaluation.
+
+### 3. Evaluation Only
+
+**`evaluate.py`** - Evaluates a trained checkpoint on the test set
 
 ```bash
-# Change model
-python train.py model.model_name=resnet101
+# Evaluate best checkpoint
+python evaluate.py checkpoint_path=outputs/<date>/<time>/checkpoints/best-epoch=XX.ckpt
 
-# Change training parameters
-python train.py training.epochs=50 training.batch_size=64 training.optimizer.lr=1e-3
-
-# Change dataset
-python train.py dataset=cifar100 model.num_classes=100
-
-# Combine overrides
-python train.py model.model_name=efficientnet_b0 training.epochs=30 training.batch_size=128
+# Evaluate on different dataset
+python evaluate.py checkpoint_path=path/to/checkpoint.ckpt dataset=cifar10
 ```
+
+**Note:** `evaluate.py` only evaluates on the **test set**. Training and validation are not performed.
 
 ### 🤖 Available Models
 
@@ -159,23 +185,6 @@ Or explore at [timm documentation](https://huggingface.co/docs/timm/index).
 
 **Bring your own data**: The `custom` dataset type accepts any image folder structure, making it trivial to experiment with your own datasets. See [Custom Dataset](#custom-dataset) section below for setup.
 
-## 📊 Evaluation
-
-After training, evaluate the model:
-
-```bash
-# Evaluate best checkpoint (Lightning saves with .ckpt extension)
-python evaluate.py checkpoint_path=outputs/<date>/<time>/checkpoints/best-epoch=XX-val_accuracy=X.XXXX.ckpt
-
-# Evaluate on different dataset
-python evaluate.py checkpoint_path=path/to/checkpoint.ckpt dataset=cifar10
-```
-
-Evaluation outputs:
-- Validation and test set metrics (accuracy, precision, recall, F1)
-- Per-class accuracy breakdown
-- Results saved to `evaluation_results.json`
-
 ## 📈 Monitoring
 
 ### TensorBoard
@@ -192,7 +201,8 @@ Logged metrics:
 - Training/validation loss
 - Training/validation accuracy, precision, recall, F1
 - Learning rate
-- Test metrics (after training)
+
+**Note:** Test metrics are only logged when using `train_and_evaluate.py` or running `evaluate.py` separately. The `train.py` script only logs train and validation metrics.
 
 ## ⚙️ Configuration
 
@@ -337,15 +347,18 @@ data/
 ### Train with Your Data
 
 ```bash
-# Basic usage - Padma auto-detects number of classes
-python train.py dataset=custom dataset.data_dir=./data model.num_classes=3
+# Basic usage - Complete pipeline (train + test evaluation)
+python train_and_evaluate.py dataset=custom dataset.data_dir=./data model.num_classes=3
 
 # Experiment with different models on your data
-python train.py dataset=custom dataset.data_dir=./data model.model_name=efficientnet_b0 model.num_classes=3
-python train.py dataset=custom dataset.data_dir=./data model.model_name=vit_small_patch16_224 model.num_classes=3
+python train_and_evaluate.py dataset=custom dataset.data_dir=./data model.model_name=efficientnet_b0 model.num_classes=3
+python train_and_evaluate.py dataset=custom dataset.data_dir=./data model.model_name=vit_small_patch16_224 model.num_classes=3
 
 # Use your data with any training configuration
-python train.py dataset=custom dataset.data_dir=./my_dataset model.num_classes=20 training.epochs=100 training.batch_size=32
+python train_and_evaluate.py dataset=custom dataset.data_dir=./my_dataset model.num_classes=20 training.epochs=100 training.batch_size=32
+
+# Or train only (without test evaluation)
+python train.py dataset=custom dataset.data_dir=./data model.num_classes=3
 ```
 
 That's it! No need to write custom dataset classes or data loading code. Focus on experimentation, not boilerplate.
@@ -373,27 +386,31 @@ Padma now supports time series classification alongside image classification, pr
 ### Quick Start with Time Series
 
 ```bash
-# ECG5000 experiments (univariate time series)
-python train.py +experiment=ecg5000_cnn1d          # 1D CNN (fast)
-python train.py +experiment=ecg5000_lstm           # LSTM
-python train.py +experiment=ecg5000_gru            # GRU
-python train.py +experiment=ecg5000_transformer    # Transformer
+# ECG5000 experiments (univariate time series) - Complete pipeline
+python train_and_evaluate.py +experiment=ecg5000_cnn1d          # 1D CNN (fast)
+python train_and_evaluate.py +experiment=ecg5000_lstm           # LSTM
+python train_and_evaluate.py +experiment=ecg5000_gru            # GRU
+python train_and_evaluate.py +experiment=ecg5000_transformer    # Transformer
 
-# UCI HAR experiments (multivariate time series)
-python train.py +experiment=uci_har_cnn1d          # 1D CNN
-python train.py +experiment=uci_har_lstm           # LSTM
-python train.py +experiment=uci_har_transformer    # Transformer
+# UCI HAR experiments (multivariate time series) - Complete pipeline
+python train_and_evaluate.py +experiment=uci_har_cnn1d          # 1D CNN
+python train_and_evaluate.py +experiment=uci_har_lstm           # LSTM
+python train_and_evaluate.py +experiment=uci_har_transformer    # Transformer
+
+# Or train only (without test evaluation)
+python train.py +experiment=ecg5000_cnn1d
+python train.py +experiment=uci_har_lstm
 ```
 
 ### Custom Hyperparameters
 
 ```bash
 # Adjust model architecture
-python train.py +experiment=ecg5000_cnn1d model.filters=[128,256,512]
-python train.py +experiment=ecg5000_lstm model.hidden_size=256 model.num_layers=3
+python train_and_evaluate.py +experiment=ecg5000_cnn1d model.filters=[128,256,512]
+python train_and_evaluate.py +experiment=ecg5000_lstm model.hidden_size=256 model.num_layers=3
 
 # Adjust training parameters
-python train.py +experiment=uci_har_transformer training.batch_size=32 training.epochs=200
+python train_and_evaluate.py +experiment=uci_har_transformer training.batch_size=32 training.epochs=200
 ```
 
 ### Monitoring
