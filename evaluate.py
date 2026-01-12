@@ -75,9 +75,15 @@ class EvaluationModule(L.LightningModule):
         }
 
 
-@hydra.main(version_base=None, config_path="configs", config_name="config")
-def main(cfg: DictConfig) -> None:
-    """Main evaluation function."""
+def evaluate(cfg: DictConfig) -> dict:
+    """Core evaluation function.
+
+    Args:
+        cfg: Hydra configuration (must include checkpoint_path)
+
+    Returns:
+        Dictionary containing evaluation results
+    """
     # Setup logging
     logging.basicConfig(
         level=getattr(logging, cfg.logging.level),
@@ -160,63 +166,52 @@ def main(cfg: DictConfig) -> None:
         enable_progress_bar=True,
     )
 
-    # Evaluate on validation set
+    # Evaluate on test set
+    if datamodule.test_dataset is None:
+        logger.error("No test dataset available for evaluation")
+        return
+
     logger.info("=" * 60)
-    logger.info("Validation Set Results:")
+    logger.info("Test Set Results:")
     logger.info("=" * 60)
 
     # Reset predictions
     eval_module.all_preds = []
     eval_module.all_targets = []
 
-    # Use val_dataloader for validation
-    trainer.test(eval_module, dataloaders=datamodule.val_dataloader())
+    trainer.test(eval_module, dataloaders=datamodule.test_dataloader())
 
-    val_results = eval_module.eval_results
-    logger.info(f"  Accuracy: {val_results['accuracy']:.4f}")
-    logger.info(f"  Total samples: {val_results['total_samples']}")
+    test_results = eval_module.eval_results
+    logger.info(f"  Accuracy: {test_results['accuracy']:.4f}")
+    logger.info(f"  Total samples: {test_results['total_samples']}")
 
-    # Evaluate on test set if available
-    test_results = None
-    if datamodule.test_dataset is not None:
-        logger.info("=" * 60)
-        logger.info("Test Set Results:")
-        logger.info("=" * 60)
-
-        # Reset predictions
-        eval_module.all_preds = []
-        eval_module.all_targets = []
-
-        trainer.test(eval_module, dataloaders=datamodule.test_dataloader())
-
-        test_results = eval_module.eval_results
-        logger.info(f"  Accuracy: {test_results['accuracy']:.4f}")
-        logger.info(f"  Total samples: {test_results['total_samples']}")
-
-        logger.info("Per-class Accuracy:")
-        for cls, acc in test_results["per_class"].items():
-            logger.info(f"  {cls}: {acc:.4f}")
+    logger.info("Per-class Accuracy:")
+    for cls, acc in test_results["per_class"].items():
+        logger.info(f"  {cls}: {acc:.4f}")
 
     # Save results
     results_path = checkpoint_path.parent / "evaluation_results.json"
     results = {
         "checkpoint": str(checkpoint_path),
-        "validation": {
-            "accuracy": val_results["accuracy"],
-            "total_samples": val_results["total_samples"],
-        },
-    }
-    if test_results is not None:
-        results["test"] = {
+        "test": {
             "accuracy": test_results["accuracy"],
             "total_samples": test_results["total_samples"],
             "per_class": test_results["per_class"],
-        }
+        },
+    }
 
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2)
 
     logger.info(f"Results saved to: {results_path}")
+
+    return results
+
+
+@hydra.main(version_base=None, config_path="configs", config_name="config")
+def main(cfg: DictConfig) -> None:
+    """Main evaluation function wrapper for Hydra."""
+    evaluate(cfg)
 
 
 if __name__ == "__main__":

@@ -33,9 +33,15 @@ from padma.utils import set_seed, get_accelerator, get_precision, create_callbac
 logger = logging.getLogger(__name__)
 
 
-@hydra.main(version_base=None, config_path="configs", config_name="config")
-def main(cfg: DictConfig) -> None:
-    """Main training function."""
+def train(cfg: DictConfig) -> str:
+    """Core training function that returns the best checkpoint path.
+
+    Args:
+        cfg: Hydra configuration
+
+    Returns:
+        Path to the best model checkpoint
+    """
     # Setup logging
     logging.basicConfig(
         level=getattr(logging, cfg.logging.level),
@@ -149,10 +155,18 @@ def main(cfg: DictConfig) -> None:
     logger.info("To view TensorBoard logs, run:")
     logger.info(f"  tensorboard --logdir={output_dir / 'tensorboard'}")
 
-    # Test on test set if available
-    if datamodule.test_dataset is not None:
-        logger.info("Evaluating on test set...")
-        trainer.test(lightning_module, datamodule=datamodule, ckpt_path="best")
+    # Return the best checkpoint path if available
+    if checkpoint_callback:
+        return checkpoint_callback.best_model_path
+    else:
+        logger.warning("No checkpoint callback found, cannot return checkpoint path")
+        return None
+
+
+@hydra.main(version_base=None, config_path="configs", config_name="config")
+def main(cfg: DictConfig) -> None:
+    """Main training function wrapper for Hydra."""
+    train(cfg)
 
 
 if __name__ == "__main__":
