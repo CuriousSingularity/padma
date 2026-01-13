@@ -110,7 +110,7 @@ def train(cfg: DictConfig) -> str:
     callbacks = create_callbacks(cfg)
 
     # Setup logger
-    logger = TensorBoardLogger(
+    tb_logger = TensorBoardLogger(
         save_dir=str(output_dir),
         name="tensorboard",
         version="",
@@ -123,7 +123,7 @@ def train(cfg: DictConfig) -> str:
         devices=1,
         precision=precision,
         callbacks=callbacks,
-        logger=logger,
+        logger=tb_logger,
         accumulate_grad_batches=cfg.training.accumulation_steps,
         log_every_n_steps=cfg.logging.log_interval,
         deterministic=True,
