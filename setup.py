@@ -19,12 +19,17 @@ setup(
         "numpy>=1.24.0",
         "scikit-learn>=1.3.0",
         "rich>=13.0.0",
+        "onnx>=1.15.0",
+        "onnxscript>=0.1.0",
     ],
     extras_require={
         "dev": [
             "pytest>=7.0.0",
             "black>=23.0.0",
             "isort>=5.12.0",
+        ],
+        "onnx-runtime": [
+            "onnxruntime>=1.16.0",
         ],
     },
     entry_points={
