@@ -15,6 +15,7 @@ Padma lets you rapidly prototype and experiment with different combinations of m
 - **⚡ Rapid Experimentation**: Switch models, datasets, and hyperparameters with simple command-line overrides - no code changes needed
 - **⚙️ Configuration-Driven**: All experiments defined through composable YAML configs using Hydra
 - **🚀 Production-Ready Training**: Built on PyTorch Lightning with automatic mixed precision, gradient accumulation, checkpointing, early stopping, and comprehensive logging
+- **📦 ONNX Export**: Automatic model export to ONNX format for deployment and cross-framework compatibility
 - **🧩 Modular & Extensible**: Clean architecture makes it easy to add new models, datasets, or training strategies
 
 ## 🤔 Why Padma?
@@ -34,10 +35,22 @@ Whether you're a researcher exploring architectures, a practitioner comparing mo
 ## 📦 Installation
 
 ```bash
+# Standard installation (includes ONNX export support)
 pip install -e .
 
 # With dev dependencies
 pip install -e ".[dev]"
+
+# With ONNX Runtime (for ONNX inference)
+pip install -e ".[onnx-runtime]"
+
+# Full installation with all extras
+pip install -e ".[dev,onnx-runtime]"
+```
+
+**Note:** ONNX export is now included by default with `onnx` and `onnxscript` packages. If you already have Padma installed, reinstall to get ONNX support:
+```bash
+pip install -e . --force-reinstall
 ```
 
 ## 🚀 Quick Start
@@ -93,7 +106,7 @@ Padma provides three workflows for training and evaluation:
 
 ### 1. Complete Pipeline (Recommended)
 
-**`train_and_evaluate.py`** - Trains on train/val sets, then evaluates on test set
+**`train_and_evaluate.py`** - Trains on train/val sets, then evaluates on test set, and exports to ONNX
 
 ```bash
 # Complete workflow with default config
@@ -108,7 +121,7 @@ python train_and_evaluate.py +experiment=imagenet_vit
 python train_and_evaluate.py model.model_name=efficientnet_b0 training.epochs=30
 ```
 
-This is the recommended approach as it provides a complete end-to-end pipeline: training → best checkpoint selection → test evaluation.
+This is the recommended approach as it provides a complete end-to-end pipeline: training → best checkpoint selection → test evaluation → ONNX export.
 
 ### 2. Training Only
 
@@ -203,6 +216,89 @@ Logged metrics:
 - Learning rate
 
 **Note:** Test metrics are only logged when using `train_and_evaluate.py` or running `evaluate.py` separately. The `train.py` script only logs train and validation metrics.
+
+## 📦 ONNX Export
+
+Padma automatically exports trained models to ONNX format when using the `train_and_evaluate.py` pipeline. ONNX models enable deployment across different frameworks and platforms (TensorFlow, TensorRT, ONNX Runtime, etc.).
+
+**Prerequisites:** ONNX export requires `onnx` and `onnxscript` packages, which are included in the standard installation. If you encounter import errors, reinstall:
+```bash
+pip install -e . --force-reinstall
+```
+
+### Automatic Export
+
+When you run the complete pipeline, ONNX export happens automatically after evaluation:
+
+```bash
+# Train, evaluate, and export to ONNX (all in one)
+python train_and_evaluate.py +experiment=mnist_mobilenet
+```
+
+The ONNX model is saved in the checkpoint directory:
+```
+outputs/{date}/{time}/checkpoints/{model_name}.onnx
+```
+
+### Manual Export
+
+You can also export models manually using the utility functions:
+
+```python
+from padma.utils import export_lightning_model_to_onnx
+from padma.trainers import ImageClassificationModule
+from hydra.utils import instantiate
+
+# Load your trained model
+model = instantiate(cfg.model)
+lightning_module = ImageClassificationModule.load_from_checkpoint(
+    checkpoint_path,
+    model=model,
+    cfg=cfg
+)
+
+# Export to ONNX
+onnx_path = export_lightning_model_to_onnx(
+    lightning_module=lightning_module,
+    checkpoint_path=checkpoint_path,
+    cfg=cfg,
+    is_timeseries=False,  # True for time series models
+)
+```
+
+### Features
+
+- **Automatic input shape detection**: Correct input shapes for both image and time series models
+- **Dynamic batch size**: Exported models support variable batch sizes
+- **Model verification**: Automatic ONNX model validation (if `onnx` package is installed)
+- **Error handling**: Pipeline continues even if ONNX export fails
+- **Support for all model types**: Works with both timm models and custom time series models
+- **CPU-based export**: Models are automatically moved to CPU for maximum compatibility
+- **Legacy exporter**: Uses stable PyTorch ONNX legacy exporter for better compatibility across architectures
+- **ONNX Opset 18**: Uses the latest stable opset version for modern ONNX runtimes
+
+### ONNX Model Usage
+
+Once exported, you can use the ONNX model with various runtimes:
+
+```python
+import onnx
+import onnxruntime as ort
+import numpy as np
+
+# Load ONNX model
+onnx_model = onnx.load("outputs/.../checkpoints/mobilenetv3_small_100.onnx")
+
+# Create inference session
+session = ort.InferenceSession("outputs/.../checkpoints/mobilenetv3_small_100.onnx")
+
+# Prepare input (e.g., for image model: batch_size, 3, 224, 224)
+dummy_input = np.random.randn(1, 3, 224, 224).astype(np.float32)
+
+# Run inference
+outputs = session.run(None, {"input": dummy_input})
+predictions = outputs[0]
+```
 
 ## ⚙️ Configuration
 
@@ -311,6 +407,7 @@ padma/
     ├── metrics.py       # Metrics tracking
     ├── callbacks.py     # Callback factory for Lightning
     ├── transforms.py    # Transform creation from Hydra configs
+    ├── onnx_export.py   # ONNX model export utilities
     └── reproducibility.py  # Seed setting
 ```
 
