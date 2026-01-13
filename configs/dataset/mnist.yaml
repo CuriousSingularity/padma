@@ -7,23 +7,35 @@ train_val_split: 0.9
 
 # Training transforms for MNIST
 train_transforms:
+  - _target_: torchvision.transforms.Resize
+    size: ${dataset.image_size}
+
   - _target_: torchvision.transforms.RandomCrop
-    size: 28
+    size: ${dataset.image_size}
     padding: 4
 
   - _target_: torchvision.transforms.RandomRotation
     degrees: 10
 
+  - _target_: torchvision.transforms.Grayscale
+    num_output_channels: 3
+
   - _target_: torchvision.transforms.ToTensor
 
   - _target_: torchvision.transforms.Normalize
-    mean: [0.1307]
-    std: [0.3081]
+    mean: [0.1307, 0.1307, 0.1307]
+    std: [0.3081, 0.3081, 0.3081]
 
 # Validation/test transforms for MNIST
 val_transforms:
+  - _target_: torchvision.transforms.Resize
+    size: ${dataset.image_size}
+
+  - _target_: torchvision.transforms.Grayscale
+    num_output_channels: 3
+
   - _target_: torchvision.transforms.ToTensor
 
   - _target_: torchvision.transforms.Normalize
-    mean: [0.1307]
-    std: [0.3081]
+    mean: [0.1307, 0.1307, 0.1307]
+    std: [0.3081, 0.3081, 0.3081]

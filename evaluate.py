@@ -112,7 +112,7 @@ def evaluate(cfg: DictConfig) -> dict:
 
     # Load checkpoint to get training config
     logger.info("Loading checkpoint...")
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
     # Use checkpoint config if available (Lightning saves hyperparameters)
     if "hyper_parameters" in checkpoint and "cfg" in checkpoint["hyper_parameters"]:
@@ -131,8 +131,7 @@ def evaluate(cfg: DictConfig) -> dict:
 
     # Create model
     logger.info("Creating model...")
-    model_factory = instantiate(train_cfg.model)
-    model = model_factory.create()
+    model = instantiate(train_cfg.model)
     model_info = get_model_info(model)
     logger.info(f"Model: {train_cfg.model.model_name}")
     logger.info(f"Total parameters: {model_info['total_params']:,}")
@@ -142,6 +141,7 @@ def evaluate(cfg: DictConfig) -> dict:
         checkpoint_path,
         model=model,
         cfg=train_cfg,
+        weights_only=False,
     )
     logger.info("Loaded Lightning checkpoint successfully")
 

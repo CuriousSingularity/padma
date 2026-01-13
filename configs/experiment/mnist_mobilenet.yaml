@@ -21,12 +21,6 @@ dataset:
   data_dir: ./data
   image_size: 224
 
-# Transformation overrides
-transformation:
-  train:
-    random_crop: false
-    horizontal_flip: false
-
 # Training overrides
 training:
   epochs: 5

@@ -38,7 +38,7 @@ class TimeSeriesDataModule(L.LightningDataModule):
             self.train_dataset, self.val_dataset, self.test_dataset = instantiate(
                 self.cfg.dataset,
                 seed=self.cfg.seed,
-                _convert_="all"
+                _recursive_=False
             )
 
         if stage == "validate":
@@ -46,7 +46,7 @@ class TimeSeriesDataModule(L.LightningDataModule):
                 _, self.val_dataset, _ = instantiate(
                     self.cfg.dataset,
                     seed=self.cfg.seed,
-                    _convert_="all"
+                    _recursive_=False
                 )
 
         if stage == "test":
@@ -54,7 +54,7 @@ class TimeSeriesDataModule(L.LightningDataModule):
                 _, _, self.test_dataset = instantiate(
                     self.cfg.dataset,
                     seed=self.cfg.seed,
-                    _convert_="all"
+                    _recursive_=False
                 )
 
     def train_dataloader(self) -> DataLoader:
